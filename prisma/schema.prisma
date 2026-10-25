@@ -1,0 +1,329 @@
+// نظام التذاكر — مؤسسة مرسال
+//
+// ملاحظة مهمة: الجداول كلها جوه schema اسمها "tickets" (من DATABASE_URL ?schema=tickets)
+// عشان النظام ده ما يلمسش أي جداول تانية لأي سيستم شغال على نفس سيرفر Postgres.
+// التعديلات على الداتابيز بتتم بـ migrations بس (prisma migrate deploy) — ممنوع db push --accept-data-loss.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  manager // مدير النظام — كل الصلاحيات ويشوف كل التيمات
+  supervisor // مشرف تيم
+  agent // موظف
+  viewer // مشاهدة فقط داخل تيماته
+}
+
+// نوع الحالة (المسار) — بيحدد الـ SLA
+enum TicketType {
+  new_case // نيو كيس — 48 ساعة
+  follow_up // فولو اب — 72 ساعة
+  emergency // طوارئ — 30 دقيقة
+}
+
+enum TicketStatus {
+  pending
+  closed
+}
+
+// مصدر التيكت
+enum TicketSource {
+  call_center
+  social_media
+  reception
+  clinics
+}
+
+// تصنيف الهوت لاين دكتور
+enum TriageLevel {
+  emergency // طارئة → الأبحاث أولاً
+  urgent // عاجلة → الفولو اب دكتور + الأبحاث في نفس الوقت
+}
+
+enum ResearchDecision {
+  pending
+  accepted
+  rejected
+}
+
+// holder = التيم شغال على التيكت دلوقتي
+// observer = تيم بيتابع بس (قراءة + تعليق) — زي مرسال إيمرجنسي هوت لاين بعد ما يحوّل للدكتور
+enum TicketTeamAccess {
+  holder
+  observer
+}
+
+enum CommentKind {
+  update // تحديث
+  note // ملاحظة
+}
+
+model Team {
+  id                 String   @id @default(cuid())
+  // كود ثابت للتيمات اللي ليها منطق في الـ workflow (HOTLINE_DOCTOR, RESEARCH, ...)
+  code               String?  @unique
+  name               String   @unique
+  description        String?
+  color              String   @default("#0d9488")
+  isActive           Boolean  @default(true)
+  // تيم استقبال — يظهر كاختيار في "التحويل إلى" عند إنشاء التيكت
+  isReceiver         Boolean  @default(false)
+  // لو متحدد: التيم ده مش ظاهر كاختيار تحويل غير لأعضاء التيم ده بس
+  transferOnlyFromId String?
+  transferOnlyFrom   Team?    @relation("TransferRestriction", fields: [transferOnlyFromId], references: [id], onDelete: SetNull)
+  restrictedTeams    Team[]   @relation("TransferRestriction")
+  createdAt          DateTime @default(now())
+
+  members   TeamMember[]
+  tickets   TicketTeam[]
+  approvals Approval[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  fullName     String
+  passwordHash String
+  role         UserRole @default(agent)
+  isActive     Boolean  @default(true)
+  // صلاحيات إضافية فردية
+  canReopen    Boolean  @default(false)
+  canExport    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  // صلاحيات فئات الموافقات (JSON: { medications: true, exceptions: false, ... })
+  approvalPerms Json @default("{}")
+
+  teams             TeamMember[]
+  createdTickets    Ticket[]        @relation("CreatedTickets")
+  assignedTickets   Ticket[]        @relation("AssignedTickets")
+  closedTickets     Ticket[]        @relation("ClosedTickets")
+  researchDecisions Ticket[]        @relation("ResearchDecisions")
+  comments          TicketComment[]
+  events            TicketEvent[]
+  attachments       Attachment[]
+  notifications     Notification[]
+  createdApprovals  Approval[]      @relation("CreatedApprovals")
+  reviewedApprovals Approval[]      @relation("ReviewedApprovals")
+}
+
+model TeamMember {
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([userId, teamId])
+  @@index([teamId])
+}
+
+model Ticket {
+  id           String       @id @default(cuid())
+  ticketNumber String       @unique
+  type         TicketType
+  status       TicketStatus @default(pending)
+  source       TicketSource
+
+  // بيانات المستفيد
+  beneficiaryName String
+  phone1          String
+  phone2          String?
+  caseCode        String?
+  relationship    String // صلة القرابة
+  nationality     String
+  nationalId      String? // لو مصري
+  unhcrNumber     String? // لو مش مصري — رقم المفوضية
+  description     String?
+
+  createdById  String
+  createdBy    User    @relation("CreatedTickets", fields: [createdById], references: [id])
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedTickets", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  slaDeadline         DateTime
+  slaBreachNotifiedAt DateTime?
+
+  closedAt    DateTime?
+  closedById  String?
+  closedBy    User?     @relation("ClosedTickets", fields: [closedById], references: [id], onDelete: SetNull)
+  closeReason String?
+
+  // مسار الهوت لاين دكتور
+  triageLevel         TriageLevel?
+  researchDecision    ResearchDecision?
+  researchDecidedAt   DateTime?
+  researchDecidedById String?
+  researchDecidedBy   User?             @relation("ResearchDecisions", fields: [researchDecidedById], references: [id], onDelete: SetNull)
+
+  teams         TicketTeam[]
+  comments      TicketComment[]
+  events        TicketEvent[]
+  attachments   Attachment[]
+  notifications Notification[]
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([createdById])
+  @@index([slaDeadline])
+}
+
+// التيمات اللي ماسكة التيكت (ممكن أكتر من تيم في نفس الوقت — زي الحالة العاجلة)
+model TicketTeam {
+  ticketId String
+  ticket   Ticket           @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  teamId   String
+  team     Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  access   TicketTeamAccess @default(holder)
+  addedAt  DateTime         @default(now())
+
+  @@id([ticketId, teamId])
+  @@index([teamId, access])
+}
+
+model TicketComment {
+  id        String      @id @default(cuid())
+  ticketId  String
+  ticket    Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id])
+  kind      CommentKind @default(update)
+  body      String
+  // اليوزرز اللي اتعملهم منشن
+  mentions  String[]    @default([])
+  createdAt DateTime    @default(now())
+
+  @@index([ticketId])
+}
+
+// الهيستوري الكامل: إنشاء، تحويل، تصنيف، قرار الأبحاث، قفل، إعادة فتح، تعديل بيانات، مرفقات...
+model TicketEvent {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  ticketId     String
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  fileName     String
+  mimeType     String
+  size         Int
+  // اسم الملف على الديسك (جوه UPLOAD_DIR) — مش بيتعرض للمستخدم
+  storageKey   String   @unique
+  createdAt    DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticketId  String?
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+model TicketCounter {
+  id    String @id
+  value Int    @default(0)
+}
+
+// ═══════════════════════════════════════════════════════════
+// نظام الموافقات الطبية (منقول من النسخة القديمة كما هو)
+// ═══════════════════════════════════════════════════════════
+
+enum ApprovalCategory {
+  medications // الأدوية
+  exceptions // استثناءات
+  tests // الفحوصات والعروض
+  immunosuppressants // الالتومارس والوزمة والحساسية
+  physio // العلاج الطبيعي والتخاطب
+  dialysis // الغسيل الكلوي
+  operations // العمليات
+  supplies // المستلزمات الطبية
+}
+
+enum ApprovalStatus {
+  pending // مرفوعة - في انتظار المراجعة
+  under_review // قيد المراجعة الطبية
+  approved // تمت الموافقة
+  rejected // مرفوضة
+  needs_info // تحتاج توضيحاً
+  dispensed // تم الصرف
+  closed // مقفولة
+}
+
+model Approval {
+  id             String           @id @default(cuid())
+  approvalNumber String           @unique
+  category       ApprovalCategory
+  status         ApprovalStatus   @default(pending)
+
+  caseCode         String
+  patientName      String
+  specialty        String?
+  service          String?
+  month            String?
+  prescriptionLink String?
+  prescriptionDate DateTime?
+  uploaderNotes    String?
+
+  approvalType    String?
+  writtenApproval String?
+  reviewerId      String?
+  reviewer        User?     @relation("ReviewedApprovals", fields: [reviewerId], references: [id])
+  reviewedAt      DateTime?
+
+  closingResponsible String?
+  receiptStatus      String?
+  receiptDate        DateTime?
+  finalNotes         String?
+
+  extra Json @default("{}")
+
+  createdById String
+  createdBy   User     @relation("CreatedApprovals", fields: [createdById], references: [id])
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([createdById])
+  @@index([teamId])
+  @@index([createdAt])
+}
+
+model ApprovalCounter {
+  category  ApprovalCategory @id
+  year      Int
+  lastValue Int
+}

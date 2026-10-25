@@ -1,0 +1,40 @@
+{
+  "name": "mersal-tickets",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3005",
+    "build": "prisma generate && next build",
+    "start": "next start -p 3005",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "test": "node --test --experimental-strip-types src/lib/*.test.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "bcryptjs": "3.0.3",
+    "clsx": "2.1.1",
+    "jose": "6.2.13",
+    "next": "15.5.28",
+    "react": "19.2.9",
+    "react-dom": "19.2.9",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "2.6.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "autoprefixer": "10.4.21",
+    "postcss": "8.5.6",
+    "prisma": "6.19.3",
+    "tailwindcss": "3.4.19",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
