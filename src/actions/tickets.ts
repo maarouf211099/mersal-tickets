@@ -20,7 +20,7 @@ async function guard(fn: () => Promise<Result>): Promise<Result> {
   try {
     return await fn();
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "حصل خطأ";
+    const msg = e instanceof Error ? e.message : "حدث خطأ";
     return { ok: false, error: msg };
   }
 }
@@ -35,7 +35,7 @@ type LoadedTicket = NonNullable<Awaited<ReturnType<typeof loadTicket>>>;
 
 async function loadWithPerms(user: SessionUser, ticketId: string) {
   const ticket = await loadTicket(ticketId);
-  if (!ticket) throw new Error("التيكت غير موجودة");
+  if (!ticket) throw new Error("التذكرة غير موجودة");
   const perms = ticketPermissions(user, ticket);
   if (!perms.canView) throw new Error("غير مصرح");
   return { ticket, perms };
@@ -49,7 +49,7 @@ function refresh(ticketId?: string) {
 
 async function teamsByCode(codes: string[]) {
   const teams = await prisma.team.findMany({ where: { code: { in: codes } } });
-  if (teams.length !== codes.length) throw new Error("تيمات مسار الدكاترة مش متعرّفة — راجع صفحة التيمات");
+  if (teams.length !== codes.length) throw new Error("فرق المسار الطبي غير معرَّفة — يُرجى مراجعة صفحة الفرق");
   return teams;
 }
 
@@ -72,8 +72,8 @@ function setObserver(tx: Prisma.TransactionClient, ticketId: string, teamIds: st
 // ─── بيانات المستفيد ────────────────────────────────────
 const detailsSchema = z.object({
   beneficiaryName: z.string().trim().min(2, "اسم الحالة مطلوب"),
-  phone1: z.string().trim().regex(/^\+?[0-9\s-]{6,20}$/, "رقم الموبايل 1 غير صحيح"),
-  phone2: z.string().trim().regex(/^\+?[0-9\s-]{6,20}$/, "رقم الموبايل 2 غير صحيح").or(z.literal("")),
+  phone1: z.string().trim().regex(/^\+?[0-9\s-]{6,20}$/, "رقم الهاتف الأول غير صحيح"),
+  phone2: z.string().trim().regex(/^\+?[0-9\s-]{6,20}$/, "رقم الهاتف الثاني غير صحيح").or(z.literal("")),
   caseCode: z.string().trim().max(50),
   relationship: z.string().trim().min(1, "صلة القرابة مطلوبة"),
   nationality: z.string().trim().min(2, "الجنسية مطلوبة"),
@@ -114,9 +114,9 @@ function readDetails(form: FormData) {
 
 // ─── إنشاء ───────────────────────────────────────────────
 const createMeta = z.object({
-  type: z.enum(["new_case", "follow_up", "emergency"], { message: "اختار نوع الحالة" }),
-  source: z.enum(["call_center", "social_media", "reception", "clinics"], { message: "اختار مصدر الحالة" }),
-  teamId: z.string().min(1, "اختار التيم اللي هتتحول له التيكت"),
+  type: z.enum(["new_case", "follow_up", "emergency"], { message: "يُرجى اختيار نوع الحالة" }),
+  source: z.enum(["call_center", "social_media", "reception", "clinics"], { message: "يُرجى اختيار مصدر الحالة" }),
+  teamId: z.string().min(1, "يُرجى اختيار الفريق الذي ستُحوَّل إليه التذكرة"),
 });
 
 export async function createTicket(form: FormData): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
@@ -135,7 +135,7 @@ export async function createTicket(form: FormData): Promise<{ ok: true; id: stri
 
     const allTeams = await prisma.team.findMany();
     const target = transferTargets(allTeams, user.teamIds, isManager(user)).find((t) => t.id === meta.data.teamId);
-    if (!target) return { ok: false, error: "مش مسموح تحوّل للتيم ده" };
+    if (!target) return { ok: false, error: "لا يُسمح لك بالتحويل إلى هذا الفريق" };
 
     const ticketNumber = await nextTicketNumber(meta.data.type);
     const createdAt = new Date();
@@ -165,14 +165,14 @@ export async function createTicket(form: FormData): Promise<{ ok: true; id: stri
       userIds: await teamMemberIds([target.id], user.id),
       ticketId: ticket.id,
       type: meta.data.type === "emergency" ? "emergency" : "new_ticket",
-      title: `${meta.data.type === "emergency" ? "🚨 طوارئ" : "تيكت جديدة"} ${ticket.ticketNumber} — ${target.name}`,
+      title: `${meta.data.type === "emergency" ? "🚨 طوارئ" : "تذكرة جديدة"} ${ticket.ticketNumber} — ${target.name}`,
       body: details.data.beneficiaryName,
     });
 
     refresh();
     return { ok: true, id: ticket.id };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "حصل خطأ" };
+    return { ok: false, error: e instanceof Error ? e.message : "حدث خطأ" };
   }
 }
 
@@ -183,7 +183,7 @@ export async function addComment(ticketId: string, kind: "update" | "note", body
     const { ticket, perms } = await loadWithPerms(user, ticketId);
     if (!perms.canComment) return { ok: false, error: "غير مصرح" };
     const clean = body.trim();
-    if (!clean) return { ok: false, error: "اكتب حاجة الأول" };
+    if (!clean) return { ok: false, error: "يُرجى كتابة نص أولًا" };
     if (clean.length > 5000) return { ok: false, error: "النص طويل جداً" };
 
     // المنشن بيوصل بس للي يقدر يشوف التيكت
@@ -213,7 +213,7 @@ export async function addComment(ticketId: string, kind: "update" | "note", body
     await notify({
       userIds: mentioned.map((m) => m.id).filter((id) => id !== user.id),
       ticketId, type: "mention",
-      title: `${user.name} عمل لك منشن في ${ticket.ticketNumber}`,
+      title: `أشار إليك ${user.name} في ${ticket.ticketNumber}`,
       body: clean.slice(0, 140),
     });
     const others = [ticket.createdById, ticket.assignedToId]
@@ -227,7 +227,7 @@ export async function addComment(ticketId: string, kind: "update" | "note", body
     const skipped = usernames.length - mentioned.length;
     refresh(ticketId);
     return skipped > 0
-      ? { ok: true, warning: `${skipped} من المنشن مش موجودين أو مش من حقهم يشوفوا التيكت — ما اتبعتلهمش إشعار` }
+      ? { ok: true, warning: `${skipped} من المشار إليهم غير موجودين أو لا يملكون صلاحية الاطلاع على التذكرة — لم يُرسَل إليهم إشعار` }
       : { ok: true };
   });
 }
@@ -237,13 +237,13 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
   return guard(async () => {
     const user = await requireUser();
     const { ticket, perms } = await loadWithPerms(user, ticketId);
-    if (!perms.canAct) return { ok: false, error: "التيكت مش مع تيمك" };
+    if (!perms.canAct) return { ok: false, error: "التذكرة ليست لدى فريقك" };
 
     const holders = ticket.teams.filter((t) => t.access === "holder");
     const allTeams = await prisma.team.findMany();
     const target = transferTargets(allTeams, user.teamIds, isManager(user), holders.map((h) => h.teamId))
       .find((t) => t.id === targetTeamId);
-    if (!target) return { ok: false, error: "مش مسموح تحوّل للتيم ده" };
+    if (!target) return { ok: false, error: "لا يُسمح لك بالتحويل إلى هذا الفريق" };
 
     // التيمات اللي بتسلّم: تيمات المستخدم اللي ماسكة التيكت (المدير: كل الماسكين)
     const from = isManager(user) ? holders : holders.filter((h) => user.teamIds.includes(h.teamId));
@@ -272,7 +272,7 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
     await notify({
       userIds: await teamMemberIds([target.id], user.id),
       ticketId, type: "transferred",
-      title: `${ticket.type === "emergency" ? "🚨 " : ""}تيكت ${ticket.ticketNumber} اتحولت لـ ${target.name}`,
+      title: `${ticket.type === "emergency" ? "🚨 " : ""}حُوِّلت التذكرة ${ticket.ticketNumber} إلى ${target.name}`,
       body: note.trim() || undefined,
     });
     refresh(ticketId);
@@ -285,7 +285,7 @@ export async function triageTicket(ticketId: string, level: "emergency" | "urgen
   return guard(async () => {
     const user = await requireUser();
     const { ticket, perms } = await loadWithPerms(user, ticketId);
-    if (!perms.canTriage) return { ok: false, error: "التصنيف لتيم الهوت لاين دكتور بس" };
+    if (!perms.canTriage) return { ok: false, error: "التصنيف من صلاحية فريق طبيب الخط الساخن فقط" };
     if (level !== "emergency" && level !== "urgent") return { ok: false, error: "تصنيف غير صحيح" };
 
     const [hotlineDoctor] = await teamsByCode([TEAM.HOTLINE_DOCTOR]);
@@ -322,11 +322,11 @@ export async function decideResearch(ticketId: string, decision: "accepted" | "r
   return guard(async () => {
     const user = await requireUser();
     const { ticket, perms } = await loadWithPerms(user, ticketId);
-    if (!perms.canResearch) return { ok: false, error: "القرار لتيم الأبحاث بس" };
+    if (!perms.canResearch) return { ok: false, error: "القرار من صلاحية فريق الأبحاث فقط" };
     if (decision !== "accepted" && decision !== "rejected") return { ok: false, error: "قرار غير صحيح" };
     const outcome = researchOutcome(decision);
     const text = comment.trim();
-    if (outcome.requiresComment && text.length < 3) return { ok: false, error: "لازم تكتب سبب الرفض" };
+    if (outcome.requiresComment && text.length < 3) return { ok: false, error: "يجب كتابة سبب الرفض" };
 
     const [research] = await teamsByCode([TEAM.RESEARCH]);
     const add = outcome.addHolders.length ? await teamsByCode(outcome.addHolders) : [];
@@ -365,8 +365,8 @@ export async function decideResearch(ticketId: string, decision: "accepted" | "r
         : await teamMemberIds(add.map((t) => t.id), user.id),
       ticketId, type: "research",
       title: outcome.close
-        ? `❌ الأبحاث رفضت ${ticket.ticketNumber} واتقفلت`
-        : `✅ الأبحاث قبلت ${ticket.ticketNumber} — للفولو اب دكتور`,
+        ? `❌ رفضت الأبحاث ${ticket.ticketNumber} وأُغلقت التذكرة`
+        : `✅ قبلت الأبحاث ${ticket.ticketNumber} — حُوِّلت إلى طبيب المتابعة`,
       body: text || undefined,
     });
     refresh(ticketId);
@@ -381,7 +381,7 @@ export async function closeTicket(ticketId: string, reason: string): Promise<Res
     const { ticket, perms } = await loadWithPerms(user, ticketId);
     if (!perms.canClose) return { ok: false, error: "غير مصرح" };
     const text = reason.trim();
-    if (text.length < 3) return { ok: false, error: "اكتب سبب / ملخص القفل" };
+    if (text.length < 3) return { ok: false, error: "يُرجى كتابة سبب الإغلاق أو ملخصه" };
     await prisma.ticket.update({
       where: { id: ticketId },
       data: {
@@ -391,7 +391,7 @@ export async function closeTicket(ticketId: string, reason: string): Promise<Res
     });
     await notify({
       userIds: [ticket.createdById, ticket.assignedToId].filter((id): id is string => !!id && id !== user.id),
-      ticketId, type: "closed", title: `تم قفل ${ticket.ticketNumber}`, body: text,
+      ticketId, type: "closed", title: `أُغلقت التذكرة ${ticket.ticketNumber}`, body: text,
     });
     refresh(ticketId);
     return { ok: true };
@@ -402,9 +402,9 @@ export async function reopenTicket(ticketId: string, note: string): Promise<Resu
   return guard(async () => {
     const user = await requireUser();
     const { ticket, perms } = await loadWithPerms(user, ticketId);
-    if (!perms.canReopen) return { ok: false, error: "إعادة الفتح محتاجة صلاحية من المدير" };
+    if (!perms.canReopen) return { ok: false, error: "إعادة الفتح تتطلب صلاحية يمنحها المدير" };
     const text = note.trim();
-    if (text.length < 3) return { ok: false, error: "اكتب سبب إعادة الفتح" };
+    if (text.length < 3) return { ok: false, error: "يُرجى كتابة سبب إعادة الفتح" };
     await prisma.ticket.update({
       where: { id: ticketId },
       data: {
@@ -434,7 +434,7 @@ export async function assignTicket(ticketId: string, assigneeId: string | null):
       const member = await prisma.user.findFirst({
         where: { id: assigneeId, isActive: true, role: { not: "viewer" }, teams: { some: { teamId: { in: holderIds } } } },
       });
-      if (!member) return { ok: false, error: "الموظف لازم يكون من التيم الماسك التيكت" };
+      if (!member) return { ok: false, error: "يجب أن يكون الموظف من الفريق المسؤول عن التذكرة" };
       name = member.fullName;
     }
     await prisma.ticket.update({
@@ -445,7 +445,7 @@ export async function assignTicket(ticketId: string, assigneeId: string | null):
       },
     });
     if (assigneeId && assigneeId !== user.id) {
-      await notify({ userIds: [assigneeId], ticketId, type: "assigned", title: `${ticket.ticketNumber} اتسندت لك` });
+      await notify({ userIds: [assigneeId], ticketId, type: "assigned", title: `أُسندت إليك التذكرة ${ticket.ticketNumber}` });
     }
     refresh(ticketId);
     return { ok: true };
@@ -454,7 +454,7 @@ export async function assignTicket(ticketId: string, assigneeId: string | null):
 
 // ─── تعديل بيانات المستفيد (مع تسجيل التغيير في الهيستوري) ─
 const FIELD_LABELS: Record<string, string> = {
-  beneficiaryName: "الاسم", phone1: "موبايل 1", phone2: "موبايل 2", caseCode: "الكود",
+  beneficiaryName: "الاسم", phone1: "الهاتف الأول", phone2: "الهاتف الثاني", caseCode: "الكود",
   relationship: "صلة القرابة", nationality: "الجنسية", nationalId: "الرقم القومي",
   unhcrNumber: "رقم المفوضية", description: "الوصف",
 };
@@ -492,7 +492,7 @@ export async function uploadAttachments(ticketId: string, form: FormData): Promi
     const { perms } = await loadWithPerms(user, ticketId);
     if (!perms.canComment) return { ok: false, error: "غير مصرح" };
     const files = pickFiles(form);
-    if (files.length === 0) return { ok: false, error: "اختار ملف" };
+    if (files.length === 0) return { ok: false, error: "يُرجى اختيار ملف" };
     const err = validateFiles(files);
     if (err) return { ok: false, error: err };
     const saved = await Promise.all(files.map(saveFile));
@@ -511,7 +511,7 @@ export async function uploadAttachments(ticketId: string, form: FormData): Promi
 export async function deleteTicket(ticketId: string): Promise<Result> {
   return guard(async () => {
     const user = await requireUser();
-    if (!isManager(user)) return { ok: false, error: "المدير بس" };
+    if (!isManager(user)) return { ok: false, error: "هذا الإجراء للمدير فقط" };
     const files = await prisma.attachment.findMany({ where: { ticketId }, select: { storageKey: true } });
     await prisma.ticket.delete({ where: { id: ticketId } });
     await Promise.all(files.map((f) => removeStoredFile(f.storageKey)));

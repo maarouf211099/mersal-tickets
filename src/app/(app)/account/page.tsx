@@ -14,7 +14,7 @@ export default async function AccountPage() {
       <div className="card grid grid-cols-2 gap-3 p-5 text-sm">
         <div><div className="text-xs text-slate-500">اسم المستخدم</div><div className="font-mono" dir="ltr" style={{ textAlign: "right" }}>@{s.user.username}</div></div>
         <div><div className="text-xs text-slate-500">الدور</div><div>{roleAr}</div></div>
-        <div className="col-span-2"><div className="text-xs text-slate-500">التيمات</div><div>{teams.map((t) => t.name).join("، ") || "—"}</div></div>
+        <div className="col-span-2"><div className="text-xs text-slate-500">الفرق</div><div>{teams.map((t) => t.name).join("، ") || "—"}</div></div>
       </div>
       <AccountForms name={s.user.name} />
     </div>

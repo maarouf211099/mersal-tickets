@@ -14,7 +14,7 @@ export function TeamsClient({ teams }: { teams: T[] }) {
   const [adding, setAdding] = useState(false);
   return (
     <div className="space-y-3">
-      {!adding ? <Button onClick={() => setAdding(true)}>+ تيم جديد</Button> : <TeamEditor teams={teams} onDone={() => setAdding(false)} />}
+      {!adding ? <Button onClick={() => setAdding(true)}>+ فريق جديد</Button> : <TeamEditor teams={teams} onDone={() => setAdding(false)} />}
       {teams.map((t) => <TeamRow key={t.id} t={t} teams={teams} />)}
     </div>
   );
@@ -31,11 +31,11 @@ function TeamRow({ t, teams }: { t: T; teams: T[] }) {
         <div>
           <div className="font-semibold text-slate-900">{t.name}</div>
           <div className="mt-1 flex flex-wrap gap-1 text-xs">
-            {t.isReceiver && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-800">تيم استقبال</span>}
-            {from && <span className="rounded-full bg-pink-100 px-2 py-0.5 text-pink-800">🔒 يظهر لـ {from.name} بس</span>}
+            {t.isReceiver && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-800">فريق استقبال</span>}
+            {from && <span className="rounded-full bg-pink-100 px-2 py-0.5 text-pink-800">🔒 يظهر لـ{from.name} فقط</span>}
             {!t.isActive && <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-700">موقوف</span>}
             {t.code && <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-slate-500">{t.code}</span>}
-            <span className="text-slate-500">{t.members} عضو · {t.open} تيكت مفتوحة</span>
+            <span className="text-slate-500">{t.members} عضو · {t.open} تذكرة مفتوحة</span>
           </div>
         </div>
       </div>
@@ -63,14 +63,14 @@ function TeamEditor({ teams, team, onDone }: { teams: T[]; team?: T; onDone: () 
         <div><Label>اللون</Label><Input type="color" value={f.color} onChange={(e) => set("color", e.target.value)} className="h-[42px] p-1" /></div>
       </div>
       <div>
-        <Label>يظهر كاختيار تحويل لأعضاء تيم معيّن بس (اختياري)</Label>
+        <Label>يظهر خيارًا للتحويل لأعضاء فريق محدد فقط (اختياري)</Label>
         <Select value={f.transferOnlyFromId ?? ""} onChange={(e) => set("transferOnlyFromId", e.target.value || null)}>
-          <option value="">— لأ، حسب &quot;تيم استقبال&quot; —</option>
+          <option value="">— لا، وفق خيار &quot;فريق استقبال&quot; —</option>
           {teams.filter((x) => x.id !== team?.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
         </Select>
       </div>
       <div className="flex flex-wrap gap-4 text-sm">
-        <label className="flex items-center gap-2"><input type="checkbox" checked={f.isReceiver} onChange={(e) => set("isReceiver", e.target.checked)} /> تيم استقبال (يتحول له من أي تيم)</label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={f.isReceiver} onChange={(e) => set("isReceiver", e.target.checked)} /> فريق استقبال (يمكن التحويل إليه من أي فريق)</label>
         <label className="flex items-center gap-2"><input type="checkbox" checked={f.isActive} onChange={(e) => set("isActive", e.target.checked)} /> نشط</label>
       </div>
       {err && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}

@@ -17,8 +17,8 @@ export default async function NewTicketPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-bold text-slate-900">تيكت جديدة</h1>
-      <p className="mb-6 mt-1 text-sm text-slate-500">املا بيانات الحالة واختار التيم اللي هتتحول له</p>
+      <h1 className="text-2xl font-bold text-slate-900">تذكرة جديدة</h1>
+      <p className="mb-6 mt-1 text-sm text-slate-500">أدخل بيانات الحالة واختر الفريق الذي ستُحوَّل إليه</p>
       <NewTicketForm
         targets={targets.map((t) => ({ id: t.id, name: t.name, color: t.color }))}
         defaultSource={defaultSource}

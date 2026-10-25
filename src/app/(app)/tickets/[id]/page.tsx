@@ -66,7 +66,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           </div>
 
           <div className="mb-4 grid grid-cols-2 gap-3 border-y border-slate-100 py-3 text-sm md:grid-cols-4">
-            <Info label="الـ SLA">
+            <Info label="مهلة الإنجاز">
               {ticket.status === "pending" ? <SlaCountdown deadline={ticket.slaDeadline.toISOString()} /> : formatDateTime(ticket.slaDeadline)}
             </Info>
             <Info label="تاريخ الإنشاء">{formatDateTime(ticket.createdAt)}</Info>
@@ -75,9 +75,9 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
-            <Info label="موبايل 1" mono>{ticket.phone1}</Info>
-            <Info label="موبايل 2" mono>{ticket.phone2 ?? "—"}</Info>
-            <Info label="الكود" mono>{ticket.caseCode ?? "—"}</Info>
+            <Info label="الهاتف الأول" mono>{ticket.phone1}</Info>
+            <Info label="الهاتف الثاني" mono>{ticket.phone2 ?? "—"}</Info>
+            <Info label="كود الحالة" mono>{ticket.caseCode ?? "—"}</Info>
             <Info label="صلة القرابة">{ticket.relationship}</Info>
             <Info label="الجنسية">{ticket.nationality}</Info>
             {ticket.nationalId
@@ -85,7 +85,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               : <Info label="رقم المفوضية" mono>{ticket.unhcrNumber ?? "—"}</Info>}
             <Info label="المصدر">{SOURCE_LABELS[ticket.source]}</Info>
             <Info label="النوع">{TYPE_LABELS[ticket.type]}</Info>
-            {ticket.triageLevel && <Info label="تصنيف الدكتور">{TRIAGE_LABELS[ticket.triageLevel]}</Info>}
+            {ticket.triageLevel && <Info label="تصنيف الطبيب">{TRIAGE_LABELS[ticket.triageLevel]}</Info>}
             {ticket.researchDecision && (
               <Info label="قرار الأبحاث">
                 {{ pending: "⏳ في الانتظار", accepted: "✅ مقبولة", rejected: "❌ مرفوضة" }[ticket.researchDecision]}
@@ -103,7 +103,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
 
           {ticket.status === "closed" && (
             <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
-              <span className="font-semibold">اتقفلت</span>
+              <span className="font-semibold">أُغلقت</span>
               {ticket.closedAt && <> في {formatDateTime(ticket.closedAt)}</>}
               {ticket.closedBy && <> بواسطة {displayName(ticket.closedBy.fullName)}</>}
               {ticket.closeReason && <p className="mt-1 whitespace-pre-wrap text-slate-700">{ticket.closeReason}</p>}
@@ -124,13 +124,13 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                 </span>
               </li>
             ))}
-            {ticket.attachments.length === 0 && <li className="text-sm text-slate-400">مفيش مرفقات</li>}
+            {ticket.attachments.length === 0 && <li className="text-sm text-slate-400">لا توجد مرفقات</li>}
           </ul>
           {perms.canComment && <div className="no-print mt-3"><UploadBox ticketId={ticket.id} /></div>}
         </div>
 
         <div className="card p-6">
-          <h2 className="mb-4 font-semibold text-slate-900">الهيستوري والتحديثات</h2>
+          <h2 className="mb-4 font-semibold text-slate-900">السجل والتحديثات</h2>
           <ol className="space-y-3">
             {timeline.map((it) =>
               it.kind === "comment" ? (
@@ -204,19 +204,19 @@ function describeEvent(action: string, metadata: unknown): string {
   const list = (v: unknown) => (Array.isArray(v) ? v.join(" + ") : String(v ?? ""));
   const withNote = (s: string, note: unknown) => (note ? `${s} — "${note}"` : s);
   switch (action) {
-    case "created": return `تم إنشاء التيكت وتحويلها لـ ${m.to}`;
-    case "transferred": return withNote(`تحويل من ${list(m.from) || "—"} إلى ${m.to}`, m.note);
-    case "triaged": return withNote(`الهوت لاين دكتور صنّفها ${m.level === "urgent" ? "عاجلة" : "طارئة"} → ${list(m.to)}`, m.note);
-    case "research_accepted": return withNote(`الأبحاث قبلت الحالة → ${list(m.to)}`, m.comment);
-    case "research_rejected": return withNote("الأبحاث رفضت الحالة واتقفلت", m.comment);
-    case "closed": return withNote("تم قفل التيكت", m.reason);
-    case "reopened": return withNote("تم إعادة فتح التيكت", m.note);
-    case "assigned": return m.to ? `اتسندت لـ ${m.to}` : "اتشال الإسناد";
-    case "attachment_added": return `اتضاف مرفق: ${list(m.files)}`;
-    case "sla_breached": return "⛔ عدّت موعد الـ SLA";
+    case "created": return `أُنشئت التذكرة وحُوِّلت إلى ${m.to}`;
+    case "transferred": return withNote(`حُوِّلت من ${list(m.from) || "—"} إلى ${m.to}`, m.note);
+    case "triaged": return withNote(`صنّفها طبيب الخط الساخن حالةً ${m.level === "urgent" ? "عاجلة" : "طارئة"} ← ${list(m.to)}`, m.note);
+    case "research_accepted": return withNote(`قبلت الأبحاث الحالة ← ${list(m.to)}`, m.comment);
+    case "research_rejected": return withNote("رفضت الأبحاث الحالة وأُغلقت التذكرة", m.comment);
+    case "closed": return withNote("أُغلقت التذكرة", m.reason);
+    case "reopened": return withNote("أُعيد فتح التذكرة", m.note);
+    case "assigned": return m.to ? `أُسندت إلى ${m.to}` : "أُلغي الإسناد";
+    case "attachment_added": return `أُضيف مرفق: ${list(m.files)}`;
+    case "sla_breached": return "⛔ تجاوزت التذكرة مهلة الإنجاز";
     case "details_updated": {
       const changes = (m.changes as { label: string; from: string | null; to: string | null }[]) ?? [];
-      return "تعديل بيانات: " + changes.map((c) => `${c.label} (${c.from ?? "—"} ← ${c.to ?? "—"})`).join("، ");
+      return "تعديل البيانات: " + changes.map((c) => `${c.label} (${c.from ?? "—"} ← ${c.to ?? "—"})`).join("، ");
     }
     default: return action;
   }

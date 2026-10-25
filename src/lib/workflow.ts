@@ -33,8 +33,8 @@ export function slaState(
 
 // ─── Labels ────────────────────────────────────────────
 export const TYPE_LABELS: Record<TicketType, string> = {
-  new_case: "نيو كيس",
-  follow_up: "فولو اب",
+  new_case: "حالة جديدة",
+  follow_up: "متابعة",
   emergency: "طوارئ",
 };
 
@@ -45,9 +45,9 @@ export const TYPE_PREFIX: Record<TicketType, string> = {
 };
 
 export const SOURCE_LABELS: Record<TicketSource, string> = {
-  call_center: "الكول سنتر",
-  social_media: "السوشيال ميديا",
-  reception: "الريسبشن",
+  call_center: "مركز الاتصال",
+  social_media: "وسائل التواصل الاجتماعي",
+  reception: "الاستقبال",
   clinics: "العيادات",
 };
 
@@ -87,17 +87,17 @@ export type SeedTeam = {
 
 export const DEFAULT_TEAMS: SeedTeam[] = [
   // تيمات الاستقبال (بيتحول لها التيكت)
-  { code: TEAM.ALEXANDRIA, name: "تيم إسكندرية", color: "#0284c7", description: "تيم إسكندرية", isReceiver: true },
-  { code: TEAM.EMERGENCY_HOTLINE, name: "مرسال إيمرجنسي هوت لاين", color: "#dc2626", description: "خط الطوارئ", isReceiver: true },
-  { code: TEAM.REGISTRATION, name: "الريجستريشن / الأوتباوند", color: "#7c3aed", description: "التسجيل والأوتباوند", isReceiver: true },
+  { code: TEAM.ALEXANDRIA, name: "فريق الإسكندرية", color: "#0284c7", description: "فريق فرع الإسكندرية", isReceiver: true },
+  { code: TEAM.EMERGENCY_HOTLINE, name: "خط طوارئ مرسال", color: "#dc2626", description: "خط الطوارئ الساخن (Emergency Hotline)", isReceiver: true },
+  { code: TEAM.REGISTRATION, name: "التسجيل والاتصال الخارجي", color: "#7c3aed", description: "التسجيل والاتصالات الصادرة (Registration / Outbound)", isReceiver: true },
   // مسار الدكاترة — مش ظاهر غير لمرسال إيمرجنسي هوت لاين
-  { code: TEAM.HOTLINE_DOCTOR, name: "هوت لاين دكتور", color: "#be185d", description: "تصنيف الحالات طبياً", isReceiver: false, transferOnlyFrom: TEAM.EMERGENCY_HOTLINE },
+  { code: TEAM.HOTLINE_DOCTOR, name: "طبيب الخط الساخن", color: "#be185d", description: "التصنيف الطبي للحالات (Hotline Doctor)", isReceiver: false, transferOnlyFrom: TEAM.EMERGENCY_HOTLINE },
   { code: TEAM.RESEARCH, name: "الأبحاث", color: "#b45309", description: "قبول أو رفض الحالات", isReceiver: false, transferOnlyFrom: TEAM.HOTLINE_DOCTOR },
-  { code: TEAM.FOLLOWUP_DOCTOR, name: "الفولو اب دكتور", color: "#047857", description: "متابعة الحالات المقبولة", isReceiver: false, transferOnlyFrom: TEAM.HOTLINE_DOCTOR },
+  { code: TEAM.FOLLOWUP_DOCTOR, name: "طبيب المتابعة", color: "#047857", description: "متابعة الحالات المقبولة", isReceiver: false, transferOnlyFrom: TEAM.HOTLINE_DOCTOR },
   // مصادر الإدخال
-  { code: TEAM.CALL_CENTER, name: "الكول سنتر", color: "#d97706", description: "مصدر إدخال", isReceiver: false },
-  { code: TEAM.SOCIAL_MEDIA, name: "السوشيال ميديا", color: "#2563eb", description: "مصدر إدخال", isReceiver: false },
-  { code: TEAM.RECEPTION, name: "الريسبشن", color: "#059669", description: "مصدر إدخال", isReceiver: false },
+  { code: TEAM.CALL_CENTER, name: "مركز الاتصال", color: "#d97706", description: "مصدر إدخال", isReceiver: false },
+  { code: TEAM.SOCIAL_MEDIA, name: "وسائل التواصل الاجتماعي", color: "#2563eb", description: "مصدر إدخال", isReceiver: false },
+  { code: TEAM.RECEPTION, name: "الاستقبال", color: "#059669", description: "مصدر إدخال", isReceiver: false },
   { code: TEAM.CLINICS, name: "العيادات", color: "#0891b2", description: "مصدر إدخال", isReceiver: false },
 ];
 
@@ -158,7 +158,7 @@ export function normalizeDigits(s: string): string {
 // مصري → رقم قومي 14 رقم. غير مصري → رقم المفوضية إجباري.
 export function identityError(nationality: string, nationalId: string, unhcrNumber: string): string | null {
   if (nationality === EGYPTIAN) {
-    if (!/^\d{14}$/.test(nationalId)) return "الرقم القومي لازم يكون 14 رقم";
+    if (!/^\d{14}$/.test(nationalId)) return "يجب أن يتكون الرقم القومي من 14 رقمًا";
     return null;
   }
   if (unhcrNumber.trim().length < 3) return "رقم المفوضية مطلوب لغير المصريين";

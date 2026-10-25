@@ -52,7 +52,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">التذاكر</h1>
-          <p className="mt-1 text-sm text-slate-500">{total} تيكت</p>
+          <p className="mt-1 text-sm text-slate-500">{total} تذكرة</p>
         </div>
         <div className="flex gap-2">
           {canExport && (
@@ -62,33 +62,33 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
           )}
           {user.role !== "viewer" && (
             <Link href="/tickets/new" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700">
-              + تيكت جديدة
+              + تذكرة جديدة
             </Link>
           )}
         </div>
       </div>
 
       <form className="card grid grid-cols-2 gap-3 p-4 md:grid-cols-7" method="get">
-        <Input name="q" defaultValue={f.q ?? ""} placeholder="بحث: اسم، موبايل، كود، رقم قومي..." className="col-span-2" />
+        <Input name="q" defaultValue={f.q ?? ""} placeholder="بحث: الاسم، الهاتف، الكود، الرقم القومي..." className="col-span-2" />
         <Select name="status" defaultValue={f.status ?? "pending"}>
           <option value="pending">قيد التنفيذ</option>
-          <option value="closed">مقفولة</option>
+          <option value="closed">مغلقة</option>
           <option value="all">الكل</option>
         </Select>
         <Select name="type" defaultValue={f.type ?? ""}>
-          <option value="">كل الأنواع</option>
+          <option value="">جميع الأنواع</option>
           {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </Select>
         <Select name="source" defaultValue={f.source ?? ""}>
-          <option value="">كل المصادر</option>
+          <option value="">جميع المصادر</option>
           {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </Select>
         <Select name="teamId" defaultValue={f.teamId ?? ""}>
-          <option value="">كل التيمات</option>
+          <option value="">جميع الفرق</option>
           {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </Select>
         <div className="flex gap-2">
-          <button className="flex-1 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-900">فلترة</button>
+          <button className="flex-1 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-900">تصفية</button>
           <Link href="/tickets" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">مسح</Link>
         </div>
         {f.sla === "breached" && <input type="hidden" name="sla" value="breached" />}
@@ -98,7 +98,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
       <div className="card overflow-x-auto">
         <table className="data-table min-w-[900px]">
           <thead>
-            <tr><th>التيكت</th><th>النوع</th><th>المصدر</th><th>مع تيم</th><th>المسؤول</th><th>الحالة</th><th>SLA</th><th>الإنشاء</th></tr>
+            <tr><th>التذكرة</th><th>النوع</th><th>المصدر</th><th>لدى فريق</th><th>المسؤول</th><th>الحالة</th><th>المهلة</th><th>تاريخ الإنشاء</th></tr>
           </thead>
           <tbody>
             {tickets.map((t) => (
@@ -128,7 +128,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
               </tr>
             ))}
             {tickets.length === 0 && (
-              <tr><td colSpan={8} className="py-12 text-center text-sm text-slate-400">مفيش تيكتات بالفلاتر دي</td></tr>
+              <tr><td colSpan={8} className="py-12 text-center text-sm text-slate-400">لا توجد تذاكر مطابقة لمعايير البحث</td></tr>
             )}
           </tbody>
         </table>

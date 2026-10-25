@@ -87,7 +87,7 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
     { href: "/notifications", label: "الإشعارات", icon: BellIcon, badge: unread },
   ];
   const adminNav = user.role === "manager" ? [
-    { href: "/admin/teams", label: "التيمات", icon: UsersIcon },
+    { href: "/admin/teams", label: "الفرق", icon: UsersIcon },
     { href: "/admin/users", label: "المستخدمون", icon: UserIcon },
   ] : [];
 
@@ -97,7 +97,7 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
   return (
     <>
       <nav className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md shadow-sm">
-        <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-6 h-16">
+        <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 sm:px-6 h-16">
           {/* Logo */}
           <Link href="/dashboard" className="shrink-0 group">
             <div className="transition-transform duration-200 group-hover:scale-105">
@@ -106,7 +106,7 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
           </Link>
 
           {/* Primary Navigation */}
-          <div className="hidden lg:flex items-center gap-1 mr-4">
+          <div className="hidden lg:flex items-center gap-1 mr-2">
             {primaryNav.map((it) => (
               <NavLink key={it.href} {...it} active={isActive(it.href)} />
             ))}
@@ -138,13 +138,13 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
           <div className="flex-1" />
 
           {/* Quick Action Buttons - "جديد" */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden xl:flex items-center gap-2">
             {user.role !== "viewer" && <QuickAdd href="/tickets/new" label="تذكرة" color="teal" />}
             <QuickAdd href="/approvals/new" label="موافقة" color="gold" />
           </div>
 
           {/* Search */}
-          <form onSubmit={submitSearch} className="hidden md:block">
+          <form onSubmit={submitSearch} className="hidden 2xl:block">
             <div className="relative group">
               <SearchIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 transition-colors group-focus-within:text-brand-600" />
               <input
@@ -177,9 +177,24 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
                   <div className="px-3 py-2 border-b border-slate-100">
                     <div className="text-sm font-semibold text-slate-900">{user.name}</div>
                     <div className="text-xs text-slate-500 mt-0.5">
-                      {user.role === "manager" ? "المدير" : user.role === "supervisor" ? "المشرف" : user.role === "agent" ? "الموظف" : "مشاهد"}
+                      {user.role === "manager" ? "المدير" : user.role === "supervisor" ? "المشرف" : user.role === "agent" ? "الموظف" : "المشاهد"}
                       {user.teams.length > 0 && <> — {user.teams.join("، ")}</>}
                     </div>
+                  </div>
+                  {/* على الشاشات الصغيرة: روابط التنقل داخل القائمة */}
+                  <div className="border-b border-slate-100 py-1 lg:hidden">
+                    {[...primaryNav, ...utilityNav, ...adminNav].map((it) => (
+                      <Link key={it.href} href={it.href} onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">
+                        <it.icon className="h-4 w-4 text-slate-400" />{it.label}
+                      </Link>
+                    ))}
+                    {user.role !== "viewer" && (
+                      <Link href="/tickets/new" onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">
+                        <PlusIcon className="h-4 w-4" />تذكرة جديدة
+                      </Link>
+                    )}
                   </div>
                   <Link
                     href="/account"

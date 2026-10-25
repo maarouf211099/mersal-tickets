@@ -35,7 +35,7 @@ function UserRow({ u, teams, isMe }: { u: U; teams: Team[]; isMe: boolean }) {
   return (
     <div className={`card flex flex-wrap items-center justify-between gap-3 p-4 ${u.isActive ? "" : "opacity-60"}`}>
       <div>
-        <div className="font-semibold text-slate-900">{u.fullName} {isMe && <span className="text-xs text-slate-400">(انت)</span>}</div>
+        <div className="font-semibold text-slate-900">{u.fullName} {isMe && <span className="text-xs text-slate-400">(أنت)</span>}</div>
         <div className="font-mono text-xs text-slate-500" dir="ltr" style={{ textAlign: "right" }}>@{u.username}</div>
         <div className="mt-1 flex flex-wrap gap-1 text-xs">
           <span className="rounded-full bg-slate-800 px-2 py-0.5 text-white">{ROLES[u.role]}</span>
@@ -47,7 +47,7 @@ function UserRow({ u, teams, isMe }: { u: U; teams: Team[]; isMe: boolean }) {
               <span className="h-2 w-2 rounded-full" style={{ background: t.color }} />{t.name}
             </span>
           ))}
-          {names.length === 0 && <span className="text-amber-700">⚠ مش في أي تيم</span>}
+          {names.length === 0 && <span className="text-amber-700">⚠ ليس عضوًا في أي فريق</span>}
         </div>
       </div>
       <div className="flex items-start gap-2">
@@ -110,7 +110,7 @@ function UserEditor({ teams, user, onDone }: { teams: Team[]; user?: U; onDone: 
         </div>
       </div>
       <div>
-        <Label>التيمات</Label>
+        <Label>الفرق</Label>
         <div className="flex flex-wrap gap-2">
           {teams.map((t) => (
             <label key={t.id} className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-sm ${f.teamIds.includes(t.id) ? "border-brand-500 bg-brand-50" : "border-slate-200"}`}>
@@ -121,8 +121,8 @@ function UserEditor({ teams, user, onDone }: { teams: Team[]; user?: U; onDone: 
         </div>
       </div>
       <div className="flex flex-wrap gap-4 text-sm">
-        <label className="flex items-center gap-2"><input type="checkbox" checked={f.canReopen} onChange={(e) => set("canReopen", e.target.checked)} /> صلاحية إعادة فتح التيكت</label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={f.canExport} onChange={(e) => set("canExport", e.target.checked)} /> صلاحية التصدير</label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={f.canReopen} onChange={(e) => set("canReopen", e.target.checked)} /> صلاحية إعادة فتح التذاكر</label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={f.canExport} onChange={(e) => set("canExport", e.target.checked)} /> صلاحية التصدير إلى Excel</label>
         {user && <label className="flex items-center gap-2"><input type="checkbox" checked={f.isActive} onChange={(e) => set("isActive", e.target.checked)} /> الحساب نشط</label>}
       </div>
       {err && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}

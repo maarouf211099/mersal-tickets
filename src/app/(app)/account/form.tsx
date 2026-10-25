@@ -22,7 +22,7 @@ export function AccountForms({ name }: { name: string }) {
         </Field>
         <Button disabled={pending} onClick={() => start(async () => {
           const r = await updateMyName(fullName);
-          setMsg(r.ok ? { ok: true, text: "اتحفظ" } : { ok: false, text: r.error });
+          setMsg(r.ok ? { ok: true, text: "تم الحفظ" } : { ok: false, text: r.error });
           router.refresh();
         })}>حفظ الاسم</Button>
       </div>
@@ -32,12 +32,12 @@ export function AccountForms({ name }: { name: string }) {
           <Input id="cur" type="password" dir="ltr" value={cur} onChange={(e) => setCur(e.target.value)} />
         </Field>
         <Field>
-          <Label htmlFor="new">كلمة المرور الجديدة (8 حروف على الأقل)</Label>
+          <Label htmlFor="new">كلمة المرور الجديدة (8 أحرف على الأقل)</Label>
           <Input id="new" type="password" dir="ltr" value={next} onChange={(e) => setNext(e.target.value)} />
         </Field>
         <Button disabled={pending || !cur || !next} onClick={() => start(async () => {
           const r = await changeMyPassword({ currentPassword: cur, newPassword: next });
-          setMsg(r.ok ? { ok: true, text: "اتغيرت كلمة المرور" } : { ok: false, text: r.error });
+          setMsg(r.ok ? { ok: true, text: "تم تغيير كلمة المرور" } : { ok: false, text: r.error });
           if (r.ok) { setCur(""); setNext(""); }
         })}>تغيير كلمة المرور</Button>
       </div>

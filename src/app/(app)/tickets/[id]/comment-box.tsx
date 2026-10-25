@@ -66,7 +66,7 @@ export function CommentBox({ ticketId, people }: { ticketId: string; people: Per
       </div>
       <div className="relative">
         <Textarea ref={ref} value={body} onChange={(e) => onChange(e.target.value)} disabled={pending}
-          placeholder="اكتب تحديث أو ملاحظة... واكتب @ عشان تعمل منشن لحد"
+          placeholder="اكتب تحديثًا أو ملاحظة... واستخدم @ للإشارة إلى زميل"
           className={kind === "note" ? "border-amber-300 bg-amber-50/40" : ""} />
         {suggestions.length > 0 && (
           <ul className="absolute right-2 top-full z-20 mt-1 w-64 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">

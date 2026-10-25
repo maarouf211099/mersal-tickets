@@ -54,7 +54,7 @@ export function TicketActions(p: Props) {
       )}
 
       {p.perms.canAct && (
-        <Card title="المسؤول عن التيكت">
+        <Card title="المسؤول عن التذكرة">
           <AssignForm assignable={p.assignable} current={p.assignedToId} pending={pending}
             onSave={(id) => run(() => assignTicket(p.ticketId, id))} />
         </Card>
@@ -66,12 +66,12 @@ export function TicketActions(p: Props) {
       )}
 
       {p.perms.canClose && (
-        <NoteAction title="قفل التيكت" placeholder="ملخص اللي اتعمل / سبب القفل (إجباري)" button="قفل التيكت"
+        <NoteAction title="إغلاق التذكرة" placeholder="ملخص ما تم أو سبب الإغلاق (إلزامي)" button="إغلاق التذكرة"
           variant="secondary" pending={pending} onSubmit={(t, clear) => run(() => closeTicket(p.ticketId, t), clear)} />
       )}
 
       {p.perms.canReopen && (
-        <NoteAction title="إعادة فتح" placeholder="سبب إعادة الفتح (إجباري)" button="🔄 إعادة فتح"
+        <NoteAction title="إعادة فتح" placeholder="سبب إعادة الفتح (إلزامي)" button="🔄 إعادة فتح"
           variant="primary" pending={pending} onSubmit={(t, clear) => run(() => reopenTicket(p.ticketId, t), clear)} />
       )}
 
@@ -81,13 +81,13 @@ export function TicketActions(p: Props) {
           {p.perms.canDelete && (
             <Button type="button" variant="danger" disabled={pending}
               onClick={() => {
-                if (!confirm("حذف التيكت نهائياً بكل الهيستوري والمرفقات؟ مفيش رجوع.")) return;
+                if (!confirm("هل تريد حذف التذكرة نهائيًا مع سجلها ومرفقاتها؟ لا يمكن التراجع عن هذا الإجراء.")) return;
                 run(() => deleteTicket(p.ticketId), () => router.push("/tickets"));
               }}>
-              🗑️ حذف نهائي (المدير)
+              🗑️ حذف نهائي (للمدير)
             </Button>
           )}
-          {nothing && <p className="text-xs text-slate-500">التيكت مش مع تيمك — تقدر تتابعها وتكتب تحديثات بس.</p>}
+          {nothing && <p className="text-xs text-slate-500">التذكرة ليست لدى فريقك — يمكنك متابعتها وإضافة تحديثات فقط.</p>}
         </div>
       </Card>
     </div>
@@ -106,14 +106,14 @@ function Card({ title, children, tone }: { title: string; children: React.ReactN
 function TriageCard({ pending, onSubmit }: { pending: boolean; onSubmit: (l: "emergency" | "urgent", note: string) => void }) {
   const [note, setNote] = useState("");
   return (
-    <Card title="🩺 تصنيف الهوت لاين دكتور" tone="doctor">
-      <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="ملاحظة الدكتور (اختياري)" className="min-h-[70px]" />
+    <Card title="🩺 تصنيف طبيب الخط الساخن" tone="doctor">
+      <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="ملاحظة الطبيب (اختياري)" className="min-h-[70px]" />
       <div className="mt-3 grid grid-cols-1 gap-2">
         <Button type="button" variant="danger" disabled={pending} onClick={() => onSubmit("emergency", note)}>
           طارئة ← الأبحاث أولاً
         </Button>
         <Button type="button" variant="primary" disabled={pending} onClick={() => onSubmit("urgent", note)}>
-          عاجلة ← الفولو اب دكتور + الأبحاث
+          عاجلة ← طبيب المتابعة + الأبحاث معًا
         </Button>
       </div>
     </Card>
@@ -124,11 +124,11 @@ function ResearchCard({ pending, onSubmit }: { pending: boolean; onSubmit: (d: "
   const [comment, setComment] = useState("");
   return (
     <Card title="🔬 قرار الأبحاث" tone="doctor">
-      <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="كومنت (إجباري في حالة الرفض)" className="min-h-[70px]" />
+      <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="تعليق (إلزامي في حالة الرفض)" className="min-h-[70px]" />
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Button type="button" variant="primary" disabled={pending} onClick={() => onSubmit("accepted", comment)}>✅ قبول</Button>
         <Button type="button" variant="danger" disabled={pending || comment.trim().length < 3}
-          onClick={() => { if (confirm("الرفض هيقفل التيكت. متأكد؟")) onSubmit("rejected", comment); }}>❌ رفض وقفل</Button>
+          onClick={() => { if (confirm("سيؤدي الرفض إلى إغلاق التذكرة. هل أنت متأكد؟")) onSubmit("rejected", comment); }}>❌ رفض وإغلاق</Button>
       </div>
     </Card>
   );
@@ -140,9 +140,9 @@ function TransferCard({ targets, pending, onSubmit }: {
   const [teamId, setTeamId] = useState("");
   const [note, setNote] = useState("");
   return (
-    <Card title="تحويل لتيم تاني">
+    <Card title="التحويل إلى فريق آخر">
       <Select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-        <option value="">اختار التيم...</option>
+        <option value="">اختر الفريق...</option>
         {targets.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
       </Select>
       <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="سبب التحويل / ملاحظة (اختياري)" className="mt-2 min-h-[60px]" />

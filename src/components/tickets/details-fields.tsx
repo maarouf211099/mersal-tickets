@@ -22,21 +22,21 @@ export function DetailsFields({ d = {} }: { d?: DetailsDefaults }) {
         <Input id="beneficiaryName" name="beneficiaryName" required defaultValue={d.beneficiaryName} />
       </div>
       <div>
-        <Label htmlFor="phone1" required>رقم الموبايل 1</Label>
+        <Label htmlFor="phone1" required>رقم الهاتف الأول</Label>
         <Input id="phone1" name="phone1" required inputMode="tel" dir="ltr" defaultValue={d.phone1} />
       </div>
       <div>
-        <Label htmlFor="phone2">رقم الموبايل 2</Label>
+        <Label htmlFor="phone2">رقم الهاتف الثاني</Label>
         <Input id="phone2" name="phone2" inputMode="tel" dir="ltr" defaultValue={d.phone2 ?? ""} />
       </div>
       <div>
-        <Label htmlFor="caseCode">الكود</Label>
+        <Label htmlFor="caseCode">كود الحالة</Label>
         <Input id="caseCode" name="caseCode" dir="ltr" defaultValue={d.caseCode ?? ""} />
       </div>
       <div>
         <Label htmlFor="relationship" required>صلة القرابة</Label>
         <Select id="relationship" name="relationship" required defaultValue={d.relationship ?? ""}>
-          <option value="" disabled>اختار...</option>
+          <option value="" disabled>اختر...</option>
           {RELATIONSHIPS.map((r) => <option key={r} value={r}>{r}</option>)}
           {d.relationship && !RELATIONSHIPS.includes(d.relationship) && <option value={d.relationship}>{d.relationship}</option>}
         </Select>
@@ -44,7 +44,7 @@ export function DetailsFields({ d = {} }: { d?: DetailsDefaults }) {
       <div>
         <Label htmlFor="nationality" required>الجنسية</Label>
         <Select id="nationality" name="nationality" required value={nationality} onChange={(e) => setNationality(e.target.value)}>
-          <option value="" disabled>اختار...</option>
+          <option value="" disabled>اختر...</option>
           {NATIONALITIES.map((n) => <option key={n} value={n}>{n}</option>)}
         </Select>
         {nationality === "أخرى" && (
@@ -53,7 +53,7 @@ export function DetailsFields({ d = {} }: { d?: DetailsDefaults }) {
       </div>
       {nationality && (egyptian ? (
         <div>
-          <Label htmlFor="nationalId" required>الرقم القومي (14 رقم)</Label>
+          <Label htmlFor="nationalId" required>الرقم القومي (14 رقمًا)</Label>
           <Input id="nationalId" name="nationalId" required inputMode="numeric" dir="ltr" maxLength={20} defaultValue={d.nationalId ?? ""} />
         </div>
       ) : (

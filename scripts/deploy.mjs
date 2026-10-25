@@ -39,14 +39,14 @@ function parseEnv(file) {
 }
 
 const deployDir = process.env.DEPLOY_DIR;
-if (!deployDir) die("لازم تحدد DEPLOY_DIR (فولدر النشر على السيرفر) — في GitHub: Settings → Variables → DEPLOY_DIR");
+if (!deployDir) die("يجب تحديد DEPLOY_DIR (مجلد النشر على السيرفر) — من GitHub: Settings → Variables → DEPLOY_DIR");
 const envFile = path.join(deployDir, ".env");
-if (!existsSync(envFile)) die(`مفيش ملف إعدادات في ${envFile} — انسخ .env.example هناك وعدّله (مرة واحدة بس)`);
+if (!existsSync(envFile)) die(`لا يوجد ملف إعدادات في ${envFile} — انسخ .env.example إليه وعدّله (مرة واحدة فقط)`);
 
 const appEnv = parseEnv(envFile);
-for (const k of ["DATABASE_URL", "AUTH_SECRET"]) if (!appEnv[k]) die(`${k} ناقص في ${envFile}`);
+for (const k of ["DATABASE_URL", "AUTH_SECRET"]) if (!appEnv[k]) die(`المتغير ${k} غير موجود في ${envFile}`);
 if (!/[?&]schema=/.test(appEnv.DATABASE_URL)) {
-  die("DATABASE_URL لازم يكون فيه ?schema=tickets عشان النظام ما يلمسش جداول أي سيستم تاني");
+  die("يجب أن يتضمن DATABASE_URL المقطع ?schema=tickets حتى لا يمس النظام جداول أي نظام آخر");
 }
 appEnv.PORT ||= "3005";
 appEnv.HOSTNAME ||= "0.0.0.0";
@@ -58,10 +58,10 @@ const env = { ...process.env, ...appEnv, NEXT_TELEMETRY_DISABLED: "1" };
 
 // pm2 لازم يكون متسطب global على السيرفر (npm i -g pm2) — مش من node_modules بتاعة الـ runner
 const pm2Check = spawnSync("pm2", ["-v"], { shell: process.platform === "win32", encoding: "utf8" });
-if (pm2Check.status !== 0) die("pm2 مش متسطب على السيرفر: npm install -g pm2");
+if (pm2Check.status !== 0) die("pm2 غير مثبت على السيرفر: npm install -g pm2");
 
-if (!run("npx", ["prisma", "migrate", "deploy"], env)) die("فشل تطبيق الـ migrations — مفيش أي حاجة اتغيرت في النسخة الشغالة");
-if (!run("npm", ["run", "build"], env)) die("فشل الـ build — النسخة الشغالة زي ما هي");
+if (!run("npx", ["prisma", "migrate", "deploy"], env)) die("فشل تطبيق الـ migrations — لم يتغير شيء في النسخة العاملة");
+if (!run("npm", ["run", "build"], env)) die("فشل البناء — النسخة العاملة باقية كما هي");
 
 // ─── نسخ الـ release ─────────────────────────────────────
 const releases = path.join(deployDir, "releases");
@@ -109,10 +109,10 @@ async function healthy(port) {
 }
 
 if (!startRelease(id) || !(await healthy(appEnv.PORT))) {
-  console.error("\n✖ النسخة الجديدة ما اشتغلتش — آخر لوج:");
+  console.error("\n✖ تعذّر تشغيل النسخة الجديدة — آخر السجل:");
   run("pm2", ["logs", APP, "--lines", "40", "--nostream"], process.env);
   if (previous && existsSync(path.join(releases, previous))) {
-    console.error(`↩ رجوع للنسخة السابقة ${previous}`);
+    console.error(`↩ العودة إلى النسخة السابقة ${previous}`);
     startRelease(previous);
     run("pm2", ["save"], process.env);
   }
@@ -127,4 +127,4 @@ const all = readdirSync(releases).sort();
 for (const old of all.slice(0, Math.max(0, all.length - KEEP_RELEASES))) {
   if (old !== id && old !== previous) rmSync(path.join(releases, old), { recursive: true, force: true });
 }
-console.log(`\n✔ تم النشر: ${id} على البورت ${appEnv.PORT}\n`);
+console.log(`\n✔ تم النشر: ${id} على المنفذ ${appEnv.PORT}\n`);

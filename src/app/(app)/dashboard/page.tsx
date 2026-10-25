@@ -42,15 +42,15 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">أهلاً {user.name}</h1>
-        <p className="mt-1 text-sm text-slate-500">ملخص التيكتات اللي تخص تيمك</p>
+        <h1 className="text-2xl font-bold text-slate-900">مرحبًا، {user.name}</h1>
+        <p className="mt-1 text-sm text-slate-500">ملخص التذاكر الخاصة بفريقك</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="قيد التنفيذ" value={totalPending} href="/tickets" />
-        <Stat label="متأخرة عن الـ SLA" value={breached} href="/tickets?sla=breached" tone="red" />
-        <Stat label="مسندة ليا" value={mine} href="/tickets?mine=1" />
-        <Stat label="اتقفلت النهارده" value={closedToday} href="/tickets?status=closed" tone="emerald" />
+        <Stat label="متجاوزة لمهلة الإنجاز" value={breached} href="/tickets?sla=breached" tone="red" />
+        <Stat label="مسندة إليّ" value={mine} href="/tickets?mine=1" />
+        <Stat label="أُغلقت اليوم" value={closedToday} href="/tickets?status=closed" tone="emerald" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -65,12 +65,12 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="card p-5 lg:col-span-2">
-          <h2 className="mb-3 font-semibold text-slate-900">الأقرب لانتهاء الـ SLA</h2>
+          <h2 className="mb-3 font-semibold text-slate-900">الأقرب إلى انتهاء مهلة الإنجاز</h2>
           {urgent.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-400">مفيش تيكتات مفتوحة 🎉</p>
+            <p className="py-8 text-center text-sm text-slate-400">لا توجد تذاكر مفتوحة 🎉</p>
           ) : (
-            <table className="data-table">
-              <thead><tr><th>التيكت</th><th>الحالة</th><th>التيم</th><th>SLA</th></tr></thead>
+            <div className="overflow-x-auto"><table className="data-table min-w-[560px]">
+              <thead><tr><th>التذكرة</th><th>النوع</th><th>الفريق</th><th>المهلة</th></tr></thead>
               <tbody>
                 {urgent.map((t) => (
                   <tr key={t.id}>
@@ -89,12 +89,12 @@ export default async function DashboardPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
 
         <div className="card p-5">
-          <h2 className="mb-3 font-semibold text-slate-900">شغل التيمات</h2>
+          <h2 className="mb-3 font-semibold text-slate-900">أعمال الفرق</h2>
           <ul className="space-y-2">
             {teams.map((t) => (
               <li key={t.id}>
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
                 </Link>
               </li>
             ))}
-            {teams.length === 0 && <li className="text-sm text-slate-400">انت مش في أي تيم — كلّم المدير</li>}
+            {teams.length === 0 && <li className="text-sm text-slate-400">لست عضوًا في أي فريق — تواصل مع المدير</li>}
           </ul>
         </div>
       </div>

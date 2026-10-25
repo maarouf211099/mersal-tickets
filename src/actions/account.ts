@@ -7,8 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 
 const schema = z.object({
-  currentPassword: z.string().min(1, "اكتب كلمة المرور الحالية"),
-  newPassword: z.string().min(8, "كلمة المرور الجديدة 8 حروف على الأقل"),
+  currentPassword: z.string().min(1, "يُرجى إدخال كلمة المرور الحالية"),
+  newPassword: z.string().min(8, "يجب ألا تقل كلمة المرور الجديدة عن 8 أحرف"),
 });
 
 export async function changeMyPassword(input: unknown) {
@@ -17,7 +17,7 @@ export async function changeMyPassword(input: unknown) {
   if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "خطأ" };
   const user = await prisma.user.findUniqueOrThrow({ where: { id: me.id } });
   if (!(await bcrypt.compare(parsed.data.currentPassword, user.passwordHash))) {
-    return { ok: false as const, error: "كلمة المرور الحالية غلط" };
+    return { ok: false as const, error: "كلمة المرور الحالية غير صحيحة" };
   }
   await prisma.user.update({
     where: { id: me.id },

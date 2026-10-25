@@ -20,7 +20,7 @@ export default async function UsersPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">المستخدمون</h1>
-        <p className="mt-1 text-sm text-slate-500">كل مستخدم يشوف شغل التيمات اللي هو عضو فيها بس. المدير يشوف الكل.</p>
+        <p className="mt-1 text-sm text-slate-500">يطّلع كل مستخدم على أعمال الفرق التي ينتمي إليها فقط، ويطّلع المدير على الجميع.</p>
       </div>
       <UsersClient
         meId={s.user.id}

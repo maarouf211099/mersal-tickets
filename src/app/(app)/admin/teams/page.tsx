@@ -16,9 +16,9 @@ export default async function TeamsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">التيمات</h1>
+        <h1 className="text-2xl font-bold text-slate-900">الفرق</h1>
         <p className="mt-1 text-sm text-slate-500">
-          &quot;تيم استقبال&quot; يظهر كاختيار تحويل للكل. التيم المقيد يظهر بس لأعضاء التيم اللي متحدد (زي الهوت لاين دكتور ← مرسال إيمرجنسي هوت لاين).
+          يظهر &quot;فريق الاستقبال&quot; خيارًا للتحويل لدى الجميع، أما الفريق المقيَّد فيظهر لأعضاء الفريق المحدد فقط (مثل طبيب الخط الساخن الذي يظهر لخط طوارئ مرسال وحده).
         </p>
       </div>
       <TeamsClient teams={teams.map((t) => ({

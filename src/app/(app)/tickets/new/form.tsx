@@ -7,6 +7,7 @@ import { Label, Select } from "@/components/ui/form";
 import { DetailsFields } from "@/components/tickets/details-fields";
 import { SLA_MINUTES, SOURCE_LABELS, TYPE_LABELS, type TicketType } from "@/lib/workflow";
 import { cn } from "@/lib/utils";
+import { FileInput } from "@/components/ui/file-input";
 
 const TYPES: { key: TicketType; icon: string; cls: string }[] = [
   { key: "emergency", icon: "🚨", cls: "border-red-300 bg-red-50 text-red-800" },
@@ -53,7 +54,7 @@ export function NewTicketForm({ targets, defaultSource }: {
               )}>
               <div className="text-2xl">{t.icon}</div>
               <div className="mt-1 font-bold">{TYPE_LABELS[t.key]}</div>
-              <div className="text-xs text-slate-500">SLA: {slaText(t.key)}</div>
+              <div className="text-xs text-slate-500">مهلة الإنجاز: {slaText(t.key)}</div>
             </button>
           ))}
         </div>
@@ -63,14 +64,14 @@ export function NewTicketForm({ targets, defaultSource }: {
         <div>
           <Label htmlFor="source" required>مصدر الحالة</Label>
           <Select id="source" name="source" required defaultValue={defaultSource}>
-            <option value="" disabled>اختار...</option>
+            <option value="" disabled>اختر...</option>
             {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </Select>
         </div>
         <div>
-          <Label htmlFor="teamId" required>تتحول لتيم</Label>
+          <Label htmlFor="teamId" required>تُحوَّل إلى فريق</Label>
           <Select id="teamId" name="teamId" required defaultValue="">
-            <option value="" disabled>اختار التيم...</option>
+            <option value="" disabled>اختر الفريق...</option>
             {targets.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </Select>
         </div>
@@ -82,10 +83,8 @@ export function NewTicketForm({ targets, defaultSource }: {
       </div>
 
       <div className="card p-5">
-        <Label htmlFor="files">مرفقات (صور، PDF، Word، Excel — لحد 5 ملفات، 10 ميجا للملف)</Label>
-        <input id="files" name="files" type="file" multiple
-          accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt"
-          className="block w-full text-sm text-slate-600 file:ml-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-brand-700" />
+        <Label htmlFor="files">المرفقات (صور، PDF، Word، Excel — حتى 5 ملفات، بحد أقصى 10 ميجابايت للملف)</Label>
+        <FileInput id="files" />
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}

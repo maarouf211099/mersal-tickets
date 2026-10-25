@@ -37,7 +37,7 @@ export default async function NotificationsPage() {
             {n.ticketId ? <OpenLink id={n.id} href={`/tickets/${n.ticketId}`} /> : null}
           </li>
         ))}
-        {items.length === 0 && <li className="p-12 text-center text-sm text-slate-400">مفيش إشعارات</li>}
+        {items.length === 0 && <li className="p-12 text-center text-sm text-slate-400">لا توجد إشعارات</li>}
       </ul>
       <p className="text-center text-xs text-slate-400"><Link href="/tickets" className="hover:underline">← التذاكر</Link></p>
     </div>

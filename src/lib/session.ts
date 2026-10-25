@@ -8,7 +8,7 @@ export const SESSION_MAX_AGE = 60 * 60 * 12; // 12 ساعة
 
 function secret() {
   const s = process.env.AUTH_SECRET;
-  if (!s || s.length < 32) throw new Error("AUTH_SECRET لازم يكون 32 حرف على الأقل في ملف .env");
+  if (!s || s.length < 32) throw new Error("يجب ألا يقل AUTH_SECRET عن 32 حرفًا في ملف .env");
   return new TextEncoder().encode(s);
 }
 

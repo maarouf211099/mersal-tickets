@@ -85,7 +85,7 @@ async function slaBreachTick() {
       userIds: [...members, t.createdById, ...(t.assignedToId ? [t.assignedToId] : [])],
       ticketId: t.id,
       type: "sla_breached",
-      title: `⛔ تجاوز الـ SLA: ${t.ticketNumber}`,
+      title: `⛔ تجاوزت التذكرة مهلة الإنجاز: ${t.ticketNumber}`,
     });
   }
 }

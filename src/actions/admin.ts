@@ -27,9 +27,9 @@ const roles = z.enum(["manager", "supervisor", "agent", "viewer"]);
 
 const userSchema = z.object({
   username: z.string().trim().toLowerCase().min(2, "اسم المستخدم قصير")
-    .regex(/^[a-z0-9._-]+$/, "اسم المستخدم حروف إنجليزي وأرقام و . _ - بس"),
+    .regex(/^[a-z0-9._-]+$/, "يقتصر اسم المستخدم على الحروف الإنجليزية والأرقام والرموز . _ -"),
   fullName: z.string().trim().min(2, "الاسم قصير"),
-  password: z.string().min(8, "كلمة المرور 8 حروف على الأقل"),
+  password: z.string().min(8, "يجب ألا تقل كلمة المرور عن 8 أحرف"),
   role: roles,
   teamIds: z.array(z.string()).default([]),
   canReopen: z.boolean().default(false),
@@ -73,7 +73,7 @@ export async function updateUser(userId: string, input: unknown): Promise<Result
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "خطأ" };
     const d = parsed.data;
     if (userId === me.id && (d.role !== "manager" || !d.isActive)) {
-      return { ok: false, error: "ما ينفعش تشيل صلاحية المدير أو توقف حسابك انت" };
+      return { ok: false, error: "لا يمكنك إزالة صلاحية المدير عن حسابك أو إيقافه" };
     }
     await prisma.$transaction([
       prisma.user.update({
@@ -90,7 +90,7 @@ export async function updateUser(userId: string, input: unknown): Promise<Result
 export async function resetPassword(userId: string, password: string): Promise<Result> {
   try {
     await requireManager();
-    if (password.length < 8) return { ok: false, error: "كلمة المرور 8 حروف على الأقل" };
+    if (password.length < 8) return { ok: false, error: "يجب ألا تقل كلمة المرور عن 8 أحرف" };
     await prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(password, 10) } });
     return done();
   } catch (e) { return fail(e); }
@@ -98,7 +98,7 @@ export async function resetPassword(userId: string, password: string): Promise<R
 
 // ─── التيمات ──────────────────────────────────────────────
 const teamSchema = z.object({
-  name: z.string().trim().min(2, "اسم التيم قصير"),
+  name: z.string().trim().min(2, "اسم الفريق قصير"),
   description: z.string().trim().max(300).default(""),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "لون غير صحيح"),
   isReceiver: z.boolean(),
@@ -112,9 +112,9 @@ export async function saveTeam(teamId: string | null, input: unknown): Promise<R
     const parsed = teamSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "خطأ" };
     const d = { ...parsed.data, description: parsed.data.description || null };
-    if (teamId && d.transferOnlyFromId === teamId) return { ok: false, error: "التيم ما يتقيدش على نفسه" };
+    if (teamId && d.transferOnlyFromId === teamId) return { ok: false, error: "لا يمكن تقييد الفريق على نفسه" };
     const clash = await prisma.team.findFirst({ where: { name: d.name, NOT: teamId ? { id: teamId } : undefined } });
-    if (clash) return { ok: false, error: "في تيم بنفس الاسم" };
+    if (clash) return { ok: false, error: "يوجد فريق بالاسم نفسه" };
     if (teamId) await prisma.team.update({ where: { id: teamId }, data: d });
     else await prisma.team.create({ data: d });
     revalidatePath("/tickets");

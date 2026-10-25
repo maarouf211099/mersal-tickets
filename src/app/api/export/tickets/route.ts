@@ -5,7 +5,7 @@ import { SOURCE_LABELS, TYPE_LABELS, TRIAGE_LABELS, slaState } from "@/lib/workf
 
 export const dynamic = "force-dynamic";
 
-const SLA_AR = { within: "ضمن الوقت", warning: "قارب", breached: "متأخر", met: "في الوقت" };
+const SLA_AR = { within: "ضمن الوقت", warning: "قارب على الانتهاء", breached: "متأخر", met: "في الوقت" };
 
 function csvCell(v: unknown) {
   let s = v == null ? "" : String(v);
@@ -31,11 +31,11 @@ export async function GET(req: Request) {
     },
   });
 
-  const header = ["رقم التيكت", "النوع", "المصدر", "الحالة", "SLA", "الاسم", "موبايل 1", "موبايل 2", "الكود",
-    "صلة القرابة", "الجنسية", "الرقم القومي", "رقم المفوضية", "التيم", "المسؤول", "تصنيف الدكتور",
-    "قرار الأبحاث", "أنشأها", "تاريخ الإنشاء", "موعد SLA", "تاريخ القفل", "سبب القفل"];
+  const header = ["رقم التذكرة", "النوع", "المصدر", "الحالة", "SLA", "الاسم", "الهاتف الأول", "الهاتف الثاني", "الكود",
+    "صلة القرابة", "الجنسية", "الرقم القومي", "رقم المفوضية", "الفريق", "المسؤول", "تصنيف الطبيب",
+    "قرار الأبحاث", "أنشأها", "تاريخ الإنشاء", "موعد SLA", "تاريخ الإغلاق", "سبب الإغلاق"];
   const lines = rows.map((t) => [
-    t.ticketNumber, TYPE_LABELS[t.type], SOURCE_LABELS[t.source], t.status === "pending" ? "قيد التنفيذ" : "مقفولة",
+    t.ticketNumber, TYPE_LABELS[t.type], SOURCE_LABELS[t.source], t.status === "pending" ? "قيد التنفيذ" : "مغلقة",
     SLA_AR[slaState(t)], t.beneficiaryName, t.phone1, t.phone2, t.caseCode, t.relationship, t.nationality,
     t.nationalId, t.unhcrNumber, t.teams.map((x) => x.team.name).join(" + "), t.assignedTo?.fullName,
     t.triageLevel ? TRIAGE_LABELS[t.triageLevel] : "", t.researchDecision ?? "", t.createdBy.fullName,
