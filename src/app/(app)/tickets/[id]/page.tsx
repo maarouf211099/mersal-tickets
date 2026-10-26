@@ -131,25 +131,35 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
 
         <div className="card p-6">
           <h2 className="mb-4 font-semibold text-slate-900">السجل والتحديثات</h2>
-          <ol className="space-y-3">
+          <ol className="relative space-y-4 before:absolute before:bottom-2 before:right-[15px] before:top-2 before:w-px before:bg-slate-200">
             {timeline.map((it) =>
               it.kind === "comment" ? (
-                <li key={it.c.id} className={`rounded-lg border p-3 ${it.c.kind === "note" ? "border-amber-200 bg-amber-50" : "border-slate-100 bg-slate-50"}`}>
-                  <div className="mb-1 flex items-center justify-between text-xs">
-                    <span className="font-medium text-slate-700">
-                      {displayName(it.c.author.fullName)} <bdi dir="ltr" className="text-slate-400">@{it.c.author.username}</bdi>
-                      <span className={`mr-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${it.c.kind === "note" ? "bg-amber-200 text-amber-900" : "bg-slate-200 text-slate-700"}`}>
-                        {it.c.kind === "note" ? "📝 ملاحظة" : "🔄 تحديث"}
+                <li key={it.c.id} className="relative flex gap-3">
+                  <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-4 ring-white ${it.c.kind === "note" ? "bg-amber-100 text-amber-800" : "bg-brand-100 text-brand-700"}`}>
+                    {it.c.author.fullName.trim().charAt(0)}
+                  </span>
+                  <div className={`min-w-0 flex-1 rounded-xl border p-3 ${it.c.kind === "note" ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white shadow-sm"}`}>
+                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="font-semibold text-slate-800">
+                        {displayName(it.c.author.fullName)} <bdi dir="ltr" className="font-normal text-slate-400">@{it.c.author.username}</bdi>
+                        <span className={`mr-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${it.c.kind === "note" ? "bg-amber-200 text-amber-900" : "bg-slate-100 text-slate-600"}`}>
+                          {it.c.kind === "note" ? "📝 ملاحظة" : "🔄 تحديث"}
+                        </span>
                       </span>
-                    </span>
-                    <span className="text-slate-500">{formatDateTime(it.c.createdAt)}</span>
+                      <span className="text-slate-400">{formatDateTime(it.c.createdAt)}</span>
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{highlightMentions(it.c.body)}</p>
                   </div>
-                  <p className="whitespace-pre-wrap text-sm text-slate-800">{highlightMentions(it.c.body)}</p>
                 </li>
               ) : (
-                <li key={it.e.id} className="border-r-2 border-slate-200 pr-3 text-xs text-slate-600">
-                  <div className="text-sm text-slate-700">{describeEvent(it.e.action, it.e.metadata)}</div>
-                  <div className="text-slate-400">{it.e.actor ? displayName(it.e.actor.fullName) : "النظام"} • {formatDateTime(it.e.createdAt)}</div>
+                <li key={it.e.id} className="relative flex items-start gap-3">
+                  <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center">
+                    <span className={`h-3 w-3 rounded-full ring-4 ring-white ${EVENT_DOT[it.e.action] ?? "bg-slate-300"}`} />
+                  </span>
+                  <div className="min-w-0 pt-1 text-xs">
+                    <div className="text-sm text-slate-700">{describeEvent(it.e.action, it.e.metadata)}</div>
+                    <div className="mt-0.5 text-slate-400">{it.e.actor ? displayName(it.e.actor.fullName) : "النظام"} • {formatDateTime(it.e.createdAt)}</div>
+                  </div>
                 </li>
               ),
             )}
@@ -197,6 +207,17 @@ function highlightMentions(body: string) {
     part.startsWith("@") ? <bdi key={i} dir="ltr" className="font-semibold text-brand-700">{part}</bdi> : part,
   );
 }
+
+const EVENT_DOT: Record<string, string> = {
+  created: "bg-brand-500",
+  transferred: "bg-sky-500",
+  triaged: "bg-pink-500",
+  research_accepted: "bg-emerald-500",
+  research_rejected: "bg-red-500",
+  closed: "bg-slate-500",
+  reopened: "bg-amber-500",
+  sla_breached: "bg-red-600",
+};
 
 type Meta = Record<string, unknown> | null;
 function describeEvent(action: string, metadata: unknown): string {

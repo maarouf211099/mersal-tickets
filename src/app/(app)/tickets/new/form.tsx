@@ -5,7 +5,7 @@ import { createTicket } from "@/actions/tickets";
 import { Button } from "@/components/ui/button";
 import { Label, Select } from "@/components/ui/form";
 import { DetailsFields } from "@/components/tickets/details-fields";
-import { SLA_MINUTES, SOURCE_LABELS, TYPE_LABELS, type TicketType } from "@/lib/workflow";
+import { slaLabel, SOURCE_LABELS, TYPE_LABELS, type TicketType } from "@/lib/workflow";
 import { cn } from "@/lib/utils";
 import { FileInput } from "@/components/ui/file-input";
 
@@ -14,11 +14,6 @@ const TYPES: { key: TicketType; icon: string; cls: string }[] = [
   { key: "new_case", icon: "🆕", cls: "border-violet-300 bg-violet-50 text-violet-800" },
   { key: "follow_up", icon: "📋", cls: "border-brand-300 bg-brand-50 text-brand-800" },
 ];
-
-function slaText(t: TicketType) {
-  const m = SLA_MINUTES[t];
-  return m < 60 ? `${m} دقيقة` : `${m / 60} ساعة`;
-}
 
 export function NewTicketForm({ targets, defaultSource }: {
   targets: { id: string; name: string; color: string }[];
@@ -54,7 +49,7 @@ export function NewTicketForm({ targets, defaultSource }: {
               )}>
               <div className="text-2xl">{t.icon}</div>
               <div className="mt-1 font-bold">{TYPE_LABELS[t.key]}</div>
-              <div className="text-xs text-slate-500">مهلة الإنجاز: {slaText(t.key)}</div>
+              <div className="text-xs text-slate-500">مهلة الإنجاز: {slaLabel(t.key)}</div>
             </button>
           ))}
         </div>

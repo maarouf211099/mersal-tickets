@@ -16,6 +16,11 @@ export function slaDeadlineFor(type: TicketType, createdAt: Date): Date {
   return new Date(createdAt.getTime() + SLA_MINUTES[type] * 60_000);
 }
 
+export function slaLabel(type: TicketType): string {
+  const m = SLA_MINUTES[type];
+  return m < 60 ? `${m} دقيقة` : `${m / 60} ساعة`;
+}
+
 export type SlaState = "within" | "warning" | "breached" | "met";
 
 // التيكت المقفولة: met لو اتقفلت قبل الموعد، breached لو بعده.

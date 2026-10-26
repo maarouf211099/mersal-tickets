@@ -33,7 +33,7 @@ export function SlaBadge({ state }: { state: SlaState }) {
 
 export function TypeBadge({ type }: { type: TicketType }) {
   return (
-    <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs", typeMap[type])}>
+    <span className={cn("inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs", typeMap[type])}>
       {typeIcon[type]} {TYPE_LABELS[type]}
     </span>
   );

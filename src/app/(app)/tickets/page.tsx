@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/access";
 import { buildTicketWhere, type TicketFilters } from "@/lib/ticket-filters";
-import { SOURCE_LABELS, TYPE_LABELS, slaState } from "@/lib/workflow";
+import { SOURCE_LABELS, TYPE_LABELS, slaState, type TicketType } from "@/lib/workflow";
 import { SlaBadge, StatusBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
 import { Input, Select } from "@/components/ui/form";
@@ -88,7 +88,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
           {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </Select>
         <div className="flex gap-2">
-          <button className="flex-1 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-900">تصفية</button>
+          <button className="flex-1 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">تصفية</button>
           <Link href="/tickets" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">مسح</Link>
         </div>
         {f.sla === "breached" && <input type="hidden" name="sla" value="breached" />}
@@ -101,9 +101,11 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
             <tr><th>التذكرة</th><th>النوع</th><th>المصدر</th><th>لدى فريق</th><th>المسؤول</th><th>الحالة</th><th>المهلة</th><th>تاريخ الإنشاء</th></tr>
           </thead>
           <tbody>
-            {tickets.map((t) => (
-              <tr key={t.id}>
-                <td>
+            {tickets.map((t) => {
+              const sla = slaState(t, now);
+              return (
+              <tr key={t.id} className={t.status === "pending" && sla === "breached" ? "bg-red-50/50" : undefined}>
+                <td className={`border-r-4 ${TYPE_STRIPE[t.type]}`}>
                   <Link href={`/tickets/${t.id}`} className="font-medium text-brand-700 hover:underline">{t.beneficiaryName}</Link>
                   <div className="font-mono text-xs text-slate-400">
                     {t.ticketNumber}{t._count.attachments > 0 && ` · 📎${t._count.attachments}`}{t._count.comments > 0 && ` · 💬${t._count.comments}`}
@@ -116,19 +118,30 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
                     {t.teams.filter((x) => x.access === "holder").map((x) => <TeamChip key={x.teamId} name={x.team.name} color={x.team.color} />)}
                   </div>
                 </td>
-                <td className="text-xs text-slate-600">{t.assignedTo ? displayName(t.assignedTo.fullName) : "—"}</td>
+                <td className="text-xs text-slate-600">
+                  {t.assignedTo ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-[11px] font-bold text-brand-700">{t.assignedTo.fullName.trim().charAt(0)}</span>
+                      {displayName(t.assignedTo.fullName)}
+                    </span>
+                  ) : <span className="text-slate-300">—</span>}
+                </td>
                 <td><StatusBadge status={t.status} /></td>
                 <td>
                   <div className="flex flex-col gap-1">
-                    <SlaBadge state={slaState(t, now)} />
+                    <SlaBadge state={sla} />
                     {t.status === "pending" && <SlaCountdown deadline={t.slaDeadline.toISOString()} />}
                   </div>
                 </td>
                 <td className="text-xs text-slate-500">{formatDateTime(t.createdAt)}</td>
               </tr>
-            ))}
+              );
+            })}
             {tickets.length === 0 && (
-              <tr><td colSpan={8} className="py-12 text-center text-sm text-slate-400">لا توجد تذاكر مطابقة لمعايير البحث</td></tr>
+              <tr><td colSpan={8} className="py-16 text-center">
+                <div className="text-4xl">🔍</div>
+                <p className="mt-2 text-sm text-slate-500">لا توجد تذاكر مطابقة لمعايير البحث</p>
+              </td></tr>
             )}
           </tbody>
         </table>
@@ -136,11 +149,17 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
 
       {pages > 1 && (
         <div className="flex items-center justify-center gap-2 text-sm">
-          {page > 1 && <Link className="rounded border bg-white px-3 py-1" href={`/tickets?${qs({ page: String(page - 1) })}`}>السابق</Link>}
+          {page > 1 && <Link className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700 shadow-sm hover:bg-slate-50" href={`/tickets?${qs({ page: String(page - 1) })}`}>السابق</Link>}
           <span className="text-slate-500">صفحة {page} من {pages}</span>
-          {page < pages && <Link className="rounded border bg-white px-3 py-1" href={`/tickets?${qs({ page: String(page + 1) })}`}>التالي</Link>}
+          {page < pages && <Link className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700 shadow-sm hover:bg-slate-50" href={`/tickets?${qs({ page: String(page + 1) })}`}>التالي</Link>}
         </div>
       )}
     </div>
   );
 }
+
+const TYPE_STRIPE: Record<TicketType, string> = {
+  emergency: "border-r-red-500",
+  new_case: "border-r-violet-400",
+  follow_up: "border-r-brand-400",
+};
