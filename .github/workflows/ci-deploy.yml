@@ -52,6 +52,9 @@ jobs:
     env:
       DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
       NEXT_TELEMETRY_DISABLED: "1"
+      # من غيره الـ runner بيقفل أي عملية اتفتحت أثناء الـ job لما يخلص ("Terminate orphan process")،
+      # ومنها عملية النظام اللي pm2 لسه مشغّلها
+      RUNNER_TRACKING_ID: ""
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
