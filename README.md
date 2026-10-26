@@ -51,6 +51,19 @@ npm run dev                 # http://localhost:3005
 
 ---
 
+## النشر السريع (أمر واحد)
+
+ضع ملف الإعدادات باسم `.env.production` بجوار هذا الملف، ثم:
+
+- **Windows:** انقر مرتين على `deploy.bat` (ينشر في `C:\mersal-tickets`)
+- **Linux:** `bash deploy.sh` (ينشر في `/opt/mersal-tickets`)
+
+يثبّت السكربت pm2 إن لم يكن موجودًا، وينسخ الإعدادات إلى مجلد النشر في أول مرة، ثم يطبّق الـ migrations ويبني النظام ويشغّله. ويمكن إعادة تشغيله بأمان بعد كل تحديث، فهو لا يعيد تشغيل إلا عملية `mersal-tickets`.
+
+> ⚠ لا تُرفع ملفات `.env` و`.env.production` إلى GitHub أبدًا.
+
+---
+
 ## النشر على السيرفر عبر GitHub Actions (Self-hosted Runner)
 
 مع كل دفع (push) إلى الفرع `main`:
