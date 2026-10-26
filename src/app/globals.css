@@ -92,3 +92,73 @@ input, textarea, select { font-size: 14px; }
   body { background: white; }
   main { max-width: 100%; padding: 0; }
 }
+
+/* ─── حركات الواجهة ─────────────────────────────────── */
+
+/* دخول الصفحة — template.tsx بيتعمله mount مع كل تنقل */
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.animate-page-in { animation: page-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+
+/* ظهور العناصر واحد ورا التاني */
+.stagger > * { animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.stagger > *:nth-child(3) { animation-delay: 0.13s; }
+.stagger > *:nth-child(4) { animation-delay: 0.18s; }
+.stagger > *:nth-child(5) { animation-delay: 0.23s; }
+.stagger > *:nth-child(6) { animation-delay: 0.28s; }
+.stagger > *:nth-child(7) { animation-delay: 0.33s; }
+.stagger > *:nth-child(8) { animation-delay: 0.38s; }
+.stagger > *:nth-child(n+9) { animation-delay: 0.42s; }
+
+/* صفوف الجداول */
+@keyframes row-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+.rows-in tbody tr { animation: row-in 0.4s ease-out backwards; }
+.rows-in tbody tr:nth-child(2) { animation-delay: 0.04s; }
+.rows-in tbody tr:nth-child(3) { animation-delay: 0.08s; }
+.rows-in tbody tr:nth-child(4) { animation-delay: 0.12s; }
+.rows-in tbody tr:nth-child(5) { animation-delay: 0.16s; }
+.rows-in tbody tr:nth-child(6) { animation-delay: 0.2s; }
+.rows-in tbody tr:nth-child(n+7) { animation-delay: 0.24s; }
+
+/* الأشرطة بتتملي من اليمين (RTL) */
+@keyframes grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.bar-grow { transform-origin: right; animation: grow-x 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards; }
+
+/* دواير الخلفية في البانر وصفحة الدخول */
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(12px, -14px) scale(1.06); }
+}
+.animate-float      { animation: float 9s ease-in-out infinite; }
+.animate-float-slow { animation: float 13s ease-in-out infinite reverse; }
+
+/* تدرّج متحرك خفيف */
+@keyframes gradient-pan { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.animate-gradient { background-size: 200% 200%; animation: gradient-pan 12s ease infinite; }
+
+/* اللوجو في صفحة الدخول */
+@keyframes pop-in { 0% { opacity: 0; transform: scale(0.6) rotate(-8deg); } 70% { transform: scale(1.06) rotate(2deg); } 100% { opacity: 1; transform: none; } }
+.animate-pop-in { animation: pop-in 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+
+/* الأيقونة بتهتز لما يبقى في طوارئ مفتوحة */
+@keyframes wiggle { 0%, 88%, 100% { transform: rotate(0); } 91% { transform: rotate(-12deg); } 94% { transform: rotate(10deg); } 97% { transform: rotate(-6deg); } }
+.animate-wiggle { animation: wiggle 3s ease-in-out infinite; }
+
+/* هياكل التحميل */
+.skeleton {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #eef2f6 25%, #f8fafc 50%, #eef2f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* لو المستخدم مفعّل "تقليل الحركة" في جهازه */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+}

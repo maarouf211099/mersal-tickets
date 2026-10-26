@@ -12,23 +12,24 @@ const FEATURES = [
 export default function LoginPage() {
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <aside className="relative hidden w-[46%] overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div aria-hidden className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-white/10" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-accent-400/15" />
+      <aside className="animate-gradient relative hidden w-[46%] overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div aria-hidden className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 animate-float rounded-full bg-white/10" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-32 -right-16 h-96 w-96 animate-float-slow rounded-full bg-accent-400/15" />
+        <div aria-hidden className="pointer-events-none absolute right-1/3 top-1/4 h-24 w-24 animate-float-slow rounded-full bg-white/5" />
         <div className="relative flex items-center gap-3">
-          <Logo size={52} showText={false} />
+          <div className="animate-pop-in"><Logo size={52} showText={false} /></div>
           <div>
             <div className="text-2xl font-extrabold text-accent-400">مرسال</div>
             <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-100">Mersal Foundation</div>
           </div>
         </div>
-        <div className="relative">
+        <div className="stagger relative">
           <h1 className="text-4xl font-extrabold leading-tight">نظام التذاكر</h1>
           <p className="mt-3 max-w-md text-brand-100">كل حالة تصل إلى الفريق المختص في الوقت المناسب، ومعها سجلها الكامل.</p>
-          <ul className="mt-10 space-y-5">
+          <ul className="stagger mt-10 space-y-5">
             {FEATURES.map((f) => (
-              <li key={f.title} className="flex items-start gap-4">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
+              <li key={f.title} className="group flex items-start gap-4">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 transition duration-300 group-hover:scale-110 group-hover:bg-white/20">
                   <f.icon className="h-5 w-5 text-accent-300" />
                 </span>
                 <div>
@@ -45,7 +46,7 @@ export default function LoginPage() {
       <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-brand-50 via-white to-accent-50/30 p-4">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center lg:hidden">
-            <div className="mb-4 flex justify-center">
+            <div className="mb-4 flex animate-pop-in justify-center">
               <Logo size={72} showText={false} />
             </div>
             <h1 className="text-3xl font-extrabold text-accent-500">مرسال</h1>

@@ -96,7 +96,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
       </form>
 
       <div className="card overflow-x-auto">
-        <table className="data-table min-w-[900px]">
+        <table className="data-table rows-in min-w-[900px]">
           <thead>
             <tr><th>التذكرة</th><th>النوع</th><th>المصدر</th><th>لدى فريق</th><th>المسؤول</th><th>الحالة</th><th>المهلة</th><th>تاريخ الإنشاء</th></tr>
           </thead>

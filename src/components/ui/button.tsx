@@ -25,7 +25,7 @@ export const Button = React.forwardRef<
     <button
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-center font-medium transition-all duration-150",
+        "inline-flex items-center justify-center font-medium transition-all duration-150 active:scale-[0.97] disabled:active:scale-100",
         "focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:ring-offset-1",
         "disabled:cursor-not-allowed",
         variants[variant], sizes[size], className,

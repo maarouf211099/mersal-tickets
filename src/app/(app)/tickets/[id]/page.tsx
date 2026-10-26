@@ -131,7 +131,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
 
         <div className="card p-6">
           <h2 className="mb-4 font-semibold text-slate-900">السجل والتحديثات</h2>
-          <ol className="relative space-y-4 before:absolute before:bottom-2 before:right-[15px] before:top-2 before:w-px before:bg-slate-200">
+          <ol className="stagger relative space-y-4 before:absolute before:bottom-2 before:right-[15px] before:top-2 before:w-px before:bg-slate-200">
             {timeline.map((it) =>
               it.kind === "comment" ? (
                 <li key={it.c.id} className="relative flex gap-3">

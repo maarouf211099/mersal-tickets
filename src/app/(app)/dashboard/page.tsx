@@ -6,6 +6,7 @@ import { isManager, ticketScope } from "@/lib/access";
 import { TYPE_LABELS, slaLabel, slaState, type TicketType } from "@/lib/workflow";
 import { SlaBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
+import { CountUp } from "@/components/ui/count-up";
 import { AlarmIcon, ArrowLeftIcon, CheckCircleIcon, ClockIcon, InboxIcon, PlusIcon, UserCheckIcon } from "@/components/ui/icons";
 
 export const dynamic = "force-dynamic";
@@ -45,9 +46,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-l from-brand-700 via-brand-600 to-brand-500 p-6 text-white shadow-lg shadow-brand-900/10">
-        <div aria-hidden className="pointer-events-none absolute -left-10 -top-16 h-48 w-48 rounded-full bg-white/10" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-20 left-32 h-40 w-40 rounded-full bg-white/5" />
+      <div className="animate-gradient relative overflow-hidden rounded-2xl bg-gradient-to-l from-brand-700 via-brand-600 to-brand-500 p-6 text-white shadow-lg shadow-brand-900/10">
+        <div aria-hidden className="pointer-events-none absolute -left-10 -top-16 h-48 w-48 animate-float rounded-full bg-white/10" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-20 left-32 h-40 w-40 animate-float-slow rounded-full bg-white/5" />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm text-brand-100">{today}</p>
@@ -57,37 +58,39 @@ export default async function DashboardPage() {
               {breached > 0 && <span className="font-semibold text-accent-200"> — منها {breached} تجاوزت المهلة</span>}
             </p>
           </div>
-          <Link href="/tickets/new" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50">
-            <PlusIcon className="h-4 w-4" /> تذكرة جديدة
+          <Link href="/tickets/new" className="group inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-50 hover:shadow-md active:scale-[0.97]">
+            <PlusIcon className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" /> تذكرة جديدة
           </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="قيد التنفيذ" value={totalPending} href="/tickets" icon={InboxIcon} tone="brand" />
         <Stat label="متجاوزة لمهلة الإنجاز" value={breached} href="/tickets?sla=breached" icon={AlarmIcon} tone="red" />
         <Stat label="مسندة إليّ" value={mine} href="/tickets?mine=1" icon={UserCheckIcon} tone="violet" />
         <Stat label="أُغلقت اليوم" value={closedToday} href="/tickets?status=closed" icon={CheckCircleIcon} tone="emerald" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-3">
         {(["emergency", "new_case", "follow_up"] as const).map((t) => {
           const n = count(t);
           const pct = totalPending ? Math.round((n / totalPending) * 100) : 0;
           return (
-            <Link key={t} href={`/tickets?type=${t}`} className={`card card-hover border-t-4 p-4 ${TYPE_STYLE[t].border}`}>
+            <Link key={t} href={`/tickets?type=${t}`} className={`card card-hover group border-t-4 p-4 ${TYPE_STYLE[t].border}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg ${TYPE_STYLE[t].tile}`}>{TYPE_STYLE[t].icon}</span>
+                  <span className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg transition-transform duration-300 group-hover:scale-110 ${TYPE_STYLE[t].tile}`}>
+                    <span className={t === "emergency" && n > 0 ? "animate-wiggle inline-block" : undefined}>{TYPE_STYLE[t].icon}</span>
+                  </span>
                   <div>
                     <div className="font-semibold text-slate-800">{TYPE_LABELS[t]}</div>
                     <div className="text-xs text-slate-500">مهلة الإنجاز: {slaLabel(t)}</div>
                   </div>
                 </div>
-                <span className="text-3xl font-bold text-slate-900">{n}</span>
+                <span className="text-3xl font-bold text-slate-900"><CountUp value={n} /></span>
               </div>
               <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                <div className={`h-full rounded-full ${TYPE_STYLE[t].bar}`} style={{ width: `${pct}%` }} />
+                <div className={`bar-grow h-full rounded-full ${TYPE_STYLE[t].bar}`} style={{ width: `${pct}%` }} />
               </div>
               <div className="mt-1.5 text-xs text-slate-400">{pct}% من التذاكر المفتوحة</div>
             </Link>
@@ -95,7 +98,7 @@ export default async function DashboardPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="stagger grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="card p-5 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="flex items-center gap-2 font-semibold text-slate-900">
@@ -112,7 +115,7 @@ export default async function DashboardPage() {
               <p className="text-sm text-slate-500">لا توجد تذاكر مفتوحة</p>
             </div>
           ) : (
-            <div className="overflow-x-auto"><table className="data-table min-w-[560px]">
+            <div className="overflow-x-auto"><table className="data-table rows-in min-w-[560px]">
               <thead><tr><th>التذكرة</th><th>النوع</th><th>الفريق</th><th>المهلة</th></tr></thead>
               <tbody>
                 {urgent.map((t) => (
@@ -141,7 +144,7 @@ export default async function DashboardPage() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600"><InboxIcon className="h-4 w-4" /></span>
             أعمال الفرق
           </h2>
-          <ul className="space-y-1">
+          <ul className="stagger space-y-1">
             {sortedTeams.map((t) => {
               const n = t._count.tickets;
               return (
@@ -155,7 +158,7 @@ export default async function DashboardPage() {
                       <span className="font-semibold text-slate-900">{n}</span>
                     </div>
                     <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-full rounded-full" style={{ width: `${(n / maxTeam) * 100}%`, background: t.color }} />
+                      <div className="bar-grow h-full rounded-full" style={{ width: `${(n / maxTeam) * 100}%`, background: t.color }} />
                     </div>
                   </Link>
                 </li>
@@ -188,10 +191,10 @@ function Stat({ label, value, href, icon: Icon, tone }: {
   const t = TONES[tone];
   const valueCls = tone === "red" && value === 0 ? "text-slate-900" : t.value;
   return (
-    <Link href={href} className="card card-hover flex items-center gap-4 p-4">
-      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${t.tile}`}><Icon className="h-6 w-6" /></span>
+    <Link href={href} className="card card-hover group flex items-center gap-4 p-4">
+      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 ${t.tile}`}><Icon className="h-6 w-6" /></span>
       <div className="min-w-0">
-        <div className={`text-2xl font-bold leading-tight ${valueCls}`}>{value}</div>
+        <div className={`text-2xl font-bold leading-tight ${valueCls}`}><CountUp value={value} /></div>
         <div className="truncate text-xs text-slate-500">{label}</div>
       </div>
     </Link>
