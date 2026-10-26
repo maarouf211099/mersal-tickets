@@ -87,7 +87,7 @@ export type SeedTeam = {
 
 export const DEFAULT_TEAMS: SeedTeam[] = [
   // تيمات الاستقبال (بيتحول لها التيكت)
-  { code: TEAM.ALEXANDRIA, name: "فريق الإسكندرية", color: "#0284c7", description: "فريق فرع الإسكندرية", isReceiver: true },
+  { code: TEAM.ALEXANDRIA, name: "فريق SHC", color: "#0284c7", description: "فريق SHC", isReceiver: true },
   { code: TEAM.EMERGENCY_HOTLINE, name: "خط طوارئ مرسال", color: "#dc2626", description: "خط الطوارئ الساخن (Emergency Hotline)", isReceiver: true },
   { code: TEAM.REGISTRATION, name: "التسجيل والاتصال الخارجي", color: "#7c3aed", description: "التسجيل والاتصالات الصادرة (Registration / Outbound)", isReceiver: true },
   // مسار الدكاترة — مش ظاهر غير لمرسال إيمرجنسي هوت لاين
