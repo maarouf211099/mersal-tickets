@@ -95,6 +95,8 @@ model User {
   // صلاحيات إضافية فردية
   canReopen    Boolean  @default(false)
   canExport    Boolean  @default(false)
+  // بيتعمل true لما المدير يحدد كلمة المرور (إنشاء أو إعادة تعيين) — المستخدم لازم يغيّرها أول ما يدخل
+  mustChangePassword Boolean @default(false)
   createdAt    DateTime @default(now())
 
   // صلاحيات فئات الموافقات (JSON: { medications: true, exceptions: false, ... })

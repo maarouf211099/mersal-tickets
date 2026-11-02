@@ -48,7 +48,7 @@ export async function createUser(input: unknown): Promise<Result> {
     await prisma.user.create({
       data: {
         username: d.username, fullName: d.fullName, role: d.role,
-        passwordHash: await bcrypt.hash(d.password, 10),
+        passwordHash: await bcrypt.hash(d.password, 10), mustChangePassword: true,
         canReopen: d.canReopen, canExport: d.canExport,
         teams: { create: d.teamIds.map((teamId) => ({ teamId })) },
       },
@@ -91,9 +91,76 @@ export async function resetPassword(userId: string, password: string): Promise<R
   try {
     await requireManager();
     if (password.length < 8) return { ok: false, error: "يجب ألا تقل كلمة المرور عن 8 أحرف" };
-    await prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(password, 10) } });
+    await prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(password, 10), mustChangePassword: true } });
     return done();
   } catch (e) { return fail(e); }
+}
+
+// ─── إضافة مجموعة مستخدمين ────────────────────────────────
+// كل سطر: الاسم، اسم المستخدم (أو الإيميل)، الفريق — مفصولين بفاصلة أو Tab
+export type ImportResult =
+  | { ok: true; created: number; skipped: { line: number; text: string; reason: string }[] }
+  | { ok: false; error: string };
+
+export async function importUsers(input: { lines: string; password: string; role: string }): Promise<ImportResult> {
+  try {
+    await requireManager();
+    if (input.password.length < 8) return { ok: false, error: "يجب ألا تقل كلمة المرور المؤقتة عن 8 أحرف" };
+    const role = roles.safeParse(input.role);
+    if (!role.success) return { ok: false, error: "دور غير صحيح" };
+
+    const teams = await prisma.team.findMany({ select: { id: true, name: true, code: true } });
+    const norm = (v: string) => v.replace(/\s+/g, " ").trim().toLowerCase();
+    const teamByKey = new Map<string, string>();
+    for (const t of teams) {
+      teamByKey.set(norm(t.name), t.id);
+      if (t.code) teamByKey.set(norm(t.code), t.id);
+    }
+
+    const skipped: { line: number; text: string; reason: string }[] = [];
+    const rows: { username: string; fullName: string; teamIds: string[] }[] = [];
+    const seen = new Set<string>();
+    input.lines.split(/\r?\n/).forEach((raw, i) => {
+      const text = raw.replace(/\u00a0/g, " ").trim();
+      if (!text) return;
+      const [name = "", login = "", teamCell = ""] = text.split(/\t|,|،/).map((c) => c.trim());
+      const username = login.split("@")[0].toLowerCase();
+      const skip = (reason: string) => skipped.push({ line: i + 1, text, reason });
+      if (name.length < 2) return skip("الاسم ناقص");
+      if (!/^[a-z0-9._-]{2,}$/.test(username)) return skip("اسم المستخدم غير صالح");
+      if (seen.has(username)) return skip("مكرر في القائمة");
+      const teamIds: string[] = [];
+      for (const part of teamCell.split("+").map(norm).filter(Boolean)) {
+        const id = teamByKey.get(part);
+        if (!id) return skip(`فريق غير موجود: ${part}`);
+        teamIds.push(id);
+      }
+      seen.add(username);
+      rows.push({ username, fullName: name.replace(/\s+/g, " "), teamIds });
+    });
+    if (rows.length > 500) return { ok: false, error: "الحد الأقصى 500 مستخدم في المرة الواحدة" };
+
+    const existing = new Set((await prisma.user.findMany({
+      where: { username: { in: rows.map((r) => r.username) } }, select: { username: true },
+    })).map((u) => u.username));
+    const passwordHash = await bcrypt.hash(input.password, 10);
+    let created = 0;
+    for (const r of rows) {
+      if (existing.has(r.username)) {
+        skipped.push({ line: 0, text: r.username, reason: "موجود بالفعل" });
+        continue;
+      }
+      await prisma.user.create({
+        data: {
+          username: r.username, fullName: r.fullName, role: role.data, passwordHash, mustChangePassword: true,
+          teams: { create: r.teamIds.map((teamId) => ({ teamId })) },
+        },
+      });
+      created++;
+    }
+    revalidatePath("/admin/users");
+    return { ok: true, created, skipped };
+  } catch (e) { return fail(e) as ImportResult; }
 }
 
 // ─── التيمات ──────────────────────────────────────────────

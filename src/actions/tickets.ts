@@ -198,7 +198,7 @@ export async function addComment(ticketId: string, kind: "update" | "note", body
       const teams = c.teams.filter((m) => m.team.isActive);
       const asSession: SessionUser = {
         id: c.id, username: c.username, name: c.fullName, role: c.role,
-        canReopen: c.canReopen, canExport: c.canExport,
+        canReopen: c.canReopen, canExport: c.canExport, mustChangePassword: c.mustChangePassword,
         teamIds: teams.map((m) => m.teamId),
         teamCodes: teams.map((m) => m.team.code).filter((x): x is string => !!x),
       };

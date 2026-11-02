@@ -16,7 +16,7 @@ function csvCell(v: unknown) {
 
 export async function GET(req: Request) {
   const s = await auth();
-  if (!s) return new Response("unauthorized", { status: 401 });
+  if (!s || s.user.mustChangePassword) return new Response("unauthorized", { status: 401 });
   if (s.user.role !== "manager" && !s.user.canExport) return new Response("forbidden", { status: 403 });
 
   const f = Object.fromEntries(new URL(req.url).searchParams) as TicketFilters;

@@ -4,25 +4,32 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
+import { auth, requireUser } from "@/lib/auth";
 
 const schema = z.object({
   currentPassword: z.string().min(1, "يُرجى إدخال كلمة المرور الحالية"),
   newPassword: z.string().min(8, "يجب ألا تقل كلمة المرور الجديدة عن 8 أحرف"),
 });
 
+// بتستخدم auth() مش requireUser() علشان تشتغل كمان لو المستخدم لسه لازم يغيّر كلمة المرور المؤقتة
 export async function changeMyPassword(input: unknown) {
-  const me = await requireUser();
+  const s = await auth();
+  if (!s) return { ok: false as const, error: "غير مسجَّل الدخول" };
+  const me = s.user;
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "خطأ" };
   const user = await prisma.user.findUniqueOrThrow({ where: { id: me.id } });
   if (!(await bcrypt.compare(parsed.data.currentPassword, user.passwordHash))) {
     return { ok: false as const, error: "كلمة المرور الحالية غير صحيحة" };
   }
+  if (parsed.data.newPassword === parsed.data.currentPassword) {
+    return { ok: false as const, error: "يجب أن تختلف كلمة المرور الجديدة عن الحالية" };
+  }
   await prisma.user.update({
     where: { id: me.id },
-    data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 10) },
+    data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 10), mustChangePassword: false },
   });
+  revalidatePath("/", "layout");
   return { ok: true as const };
 }
 

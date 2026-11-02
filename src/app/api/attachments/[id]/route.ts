@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 // تنزيل مرفق — بيتأكد إن المستخدم من حقه يشوف التيكت
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const s = await auth();
-  if (!s) return new Response("unauthorized", { status: 401 });
+  if (!s || s.user.mustChangePassword) return new Response("unauthorized", { status: 401 });
   const { id } = await params;
   const file = await prisma.attachment.findFirst({
     where: { id, ticket: ticketScope(s.user) },

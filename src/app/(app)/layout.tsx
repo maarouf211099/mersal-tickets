@@ -2,11 +2,13 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Nav } from "@/components/layout/nav";
+import { ForcePasswordChange } from "@/components/account/force-password";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session) redirect("/login");
   const { user } = session;
+  if (user.mustChangePassword) return <ForcePasswordChange name={user.name} />;
 
   const [unread, teams] = await Promise.all([
     prisma.notification.count({ where: { userId: user.id, isRead: false } }),

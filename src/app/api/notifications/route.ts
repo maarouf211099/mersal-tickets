@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 // الـ Nav بيسأل كل 20 ثانية: عدد غير المقروء + الجديد من آخر مرة
 export async function GET(req: Request) {
   const s = await auth();
-  if (!s) return Response.json({ error: "unauthorized" }, { status: 401 });
+  if (!s || s.user.mustChangePassword) return Response.json({ error: "unauthorized" }, { status: 401 });
   const sinceParam = new URL(req.url).searchParams.get("since");
   const since = sinceParam ? new Date(sinceParam) : null;
   const [unread, fresh] = await Promise.all([

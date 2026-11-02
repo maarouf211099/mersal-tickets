@@ -1,9 +1,9 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createUser, resetPassword, updateUser } from "@/actions/admin";
+import { createUser, importUsers, resetPassword, updateUser, type ImportResult } from "@/actions/admin";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Select } from "@/components/ui/form";
+import { Input, Label, Select, Textarea } from "@/components/ui/form";
 import { ApprovalPermsPanel } from "./approval-perms";
 
 type Role = "manager" | "supervisor" | "agent" | "viewer";
@@ -15,12 +15,17 @@ type U = {
 const ROLES: Record<Role, string> = { manager: "مدير", supervisor: "مشرف", agent: "موظف", viewer: "مشاهد" };
 
 export function UsersClient({ users, teams, meId }: { users: U[]; teams: Team[]; meId: string }) {
-  const [adding, setAdding] = useState(false);
+  const [mode, setMode] = useState<"none" | "one" | "bulk">("none");
   return (
     <div className="space-y-4">
-      {!adding
-        ? <Button onClick={() => setAdding(true)}>+ مستخدم جديد</Button>
-        : <UserEditor teams={teams} onDone={() => setAdding(false)} />}
+      {mode === "none" && (
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setMode("one")}>+ مستخدم جديد</Button>
+          <Button variant="secondary" onClick={() => setMode("bulk")}>إضافة مجموعة مستخدمين</Button>
+        </div>
+      )}
+      {mode === "one" && <UserEditor teams={teams} onDone={() => setMode("none")} />}
+      {mode === "bulk" && <BulkImport teams={teams} onDone={() => setMode("none")} />}
       <div className="space-y-3">
         {users.map((u) => <UserRow key={u.id} u={u} teams={teams} isMe={u.id === meId} />)}
       </div>
@@ -129,6 +134,68 @@ function UserEditor({ teams, user, onDone }: { teams: Team[]; user?: U; onDone: 
       <div className="flex gap-2">
         <Button disabled={pending} onClick={save}>{pending ? "..." : "حفظ"}</Button>
         <Button variant="ghost" onClick={onDone}>إلغاء</Button>
+      </div>
+    </div>
+  );
+}
+
+function BulkImport({ teams, onDone }: { teams: Team[]; onDone: () => void }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [lines, setLines] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<Role>("agent");
+  const [res, setRes] = useState<ImportResult | null>(null);
+  const count = lines.split(/\r?\n/).filter((l) => l.trim()).length;
+
+  return (
+    <div className="card space-y-4 border-brand-300 p-5">
+      <div>
+        <h2 className="font-semibold text-slate-900">إضافة مجموعة مستخدمين</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          كل سطر لمستخدم واحد: <b>الاسم، اسم المستخدم أو الإيميل، الفريق</b> — مفصولة بفاصلة أو منسوخة من Excel مباشرة (3 أعمدة).
+          من الإيميل يُؤخذ ما قبل @ كاسم مستخدم. لأكثر من فريق اكتب بينها +.
+        </p>
+        <p className="mt-1 text-xs text-slate-500">الفرق المتاحة: {teams.map((t) => t.name).join(" · ")}</p>
+      </div>
+      <Textarea dir="ltr" rows={10} className="font-mono text-xs" value={lines} onChange={(e) => setLines(e.target.value)}
+        placeholder={"Ahmed Selim, ahmed.selim@mersal-ngo.org, فريق SHC\nRana Wael, rana.wael@mersal-ngo.org, مركز الاتصال"} />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div>
+          <Label required>كلمة المرور المؤقتة للجميع</Label>
+          <Input dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8 أحرف على الأقل" />
+          <p className="mt-1 text-xs text-slate-500">سيُطلب من كل مستخدم تغييرها عند أول دخول.</p>
+        </div>
+        <div>
+          <Label>الدور</Label>
+          <Select value={role} onChange={(e) => setRole(e.target.value as Role)}>
+            {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </Select>
+        </div>
+      </div>
+      {res && !res.ok && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{res.error}</div>}
+      {res?.ok && (
+        <div className="space-y-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          <div>✅ تمت إضافة {res.created} مستخدم.</div>
+          {res.skipped.length > 0 && (
+            <div className="text-amber-800">
+              <div className="font-semibold">لم يُضف {res.skipped.length}:</div>
+              <ul className="mt-1 list-inside list-disc text-xs">
+                {res.skipped.map((s, i) => (
+                  <li key={i}><bdi dir="ltr">{s.text}</bdi> — {s.reason}{s.line > 0 && ` (سطر ${s.line})`}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Button disabled={pending || count === 0 || password.length < 8} onClick={() => start(async () => {
+          const r = await importUsers({ lines, password, role });
+          setRes(r);
+          if (r.ok) { setLines(""); router.refresh(); }
+        })}>{pending ? "جاري الإضافة..." : `إضافة ${count} مستخدم`}</Button>
+        <Button variant="ghost" onClick={onDone}>إغلاق</Button>
       </div>
     </div>
   );

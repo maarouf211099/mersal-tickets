@@ -12,6 +12,7 @@ export type SessionUser = {
   role: UserRole;
   canReopen: boolean;
   canExport: boolean;
+  mustChangePassword: boolean;
   teamIds: string[];
   teamCodes: string[];
 };
@@ -30,7 +31,7 @@ export const auth = cache(async (): Promise<{ user: SessionUser } | null> => {
   return {
     user: {
       id: u.id, username: u.username, name: u.fullName, role: u.role,
-      canReopen: u.canReopen, canExport: u.canExport,
+      canReopen: u.canReopen, canExport: u.canExport, mustChangePassword: u.mustChangePassword,
       teamIds: teams.map((t) => t.id),
       teamCodes: teams.map((t) => t.code).filter((c): c is string => !!c),
     },
@@ -40,6 +41,8 @@ export const auth = cache(async (): Promise<{ user: SessionUser } | null> => {
 export async function requireUser(): Promise<SessionUser> {
   const s = await auth();
   if (!s) throw new Error("غير مسجَّل الدخول");
+  // لحد ما يغيّر كلمة المرور المؤقتة ما يقدرش يعمل أي حاجة تانية
+  if (s.user.mustChangePassword) throw new Error("يجب تغيير كلمة المرور أولًا");
   return s.user;
 }
 
