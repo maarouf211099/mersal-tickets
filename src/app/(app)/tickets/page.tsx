@@ -85,6 +85,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
         </Select>
         <Select name="teamId" defaultValue={f.teamId ?? ""}>
           <option value="">جميع الفرق</option>
+          {!isManager(user) && <option value="mine">تذاكر فرقي</option>}
           {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </Select>
         <div className="flex gap-2">

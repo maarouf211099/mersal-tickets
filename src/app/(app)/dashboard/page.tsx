@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, ticketScope } from "@/lib/access";
+import { isManager, myWorkScope } from "@/lib/access";
 import { TYPE_LABELS, slaLabel, slaState, type TicketType } from "@/lib/workflow";
 import { SlaBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   const s = await auth();
   if (!s) redirect("/login");
   const { user } = s;
-  const scope = ticketScope(user);
+  const scope = myWorkScope(user);
   const now = new Date();
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);

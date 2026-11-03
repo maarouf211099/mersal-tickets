@@ -5,8 +5,13 @@ import { TEAM } from "./workflow";
 
 export const isManager = (u: Pick<SessionUser, "role">) => u.role === "manager";
 
-// كل تيم يشوف شغله بس: التيكتات اللي تيمه ماسكها أو بيتابعها + اللي هو عملها
-export function ticketScope(u: SessionUser): Prisma.TicketWhereInput {
+// كل المستخدمين بيشوفوا كل التيكتات — الإجراءات بس (تحويل/إسناد/قفل) للتيم اللي ماسكها
+export function ticketScope(_u: SessionUser): Prisma.TicketWhereInput {
+  return {};
+}
+
+// شغل المستخدم: التيكتات اللي تيمه ماسكها أو بيتابعها + اللي هو عملها (للرئيسية وفلتر "فرقي")
+export function myWorkScope(u: SessionUser): Prisma.TicketWhereInput {
   if (isManager(u)) return {};
   return {
     OR: [
@@ -30,7 +35,7 @@ export function ticketPermissions(u: SessionUser, t: TicketForAccess) {
   const holders = t.teams.filter((x) => x.access === "holder");
   const holderCodes = holders.map((h) => h.team.code);
   const myHolder = holders.some((h) => mine.has(h.teamId));
-  const canView = manager || t.createdById === u.id || t.teams.some((x) => mine.has(x.teamId));
+  const canView = true;
   const pending = t.status === "pending";
   const writer = u.role !== "viewer";
   const canAct = pending && writer && (manager || myHolder);

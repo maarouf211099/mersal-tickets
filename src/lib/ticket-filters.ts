@@ -1,7 +1,7 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import type { SessionUser } from "./auth";
-import { ticketScope } from "./access";
+import { myWorkScope, ticketScope } from "./access";
 import { normalizeDigits } from "./workflow";
 
 export type TicketFilters = {
@@ -18,7 +18,8 @@ export function buildTicketWhere(user: SessionUser, f: TicketFilters): Prisma.Ti
   if (f.source === "call_center" || f.source === "social_media" || f.source === "reception" || f.source === "clinics") {
     and.push({ source: f.source });
   }
-  if (f.teamId) and.push({ teams: { some: { teamId: f.teamId, access: "holder" } } });
+  if (f.teamId === "mine") and.push(myWorkScope(user));
+  else if (f.teamId) and.push({ teams: { some: { teamId: f.teamId, access: "holder" } } });
   if (f.mine === "1") and.push({ assignedToId: user.id });
   if (f.sla === "breached") and.push({ status: "pending", slaDeadline: { lt: new Date() } });
   const q = normalizeDigits(f.q?.trim() ?? "");

@@ -5,7 +5,7 @@ import { isManager } from "@/lib/access";
 import { EGYPTIAN, SOURCE_LABELS, TRIAGE_LABELS, TYPE_LABELS, slaState, transferTargets } from "@/lib/workflow";
 import { SlaBadge, StatusBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
-import { displayName, formatBytes, formatDateTime } from "@/lib/utils";
+import { displayName, formatBytes, formatDateTime, formatSince } from "@/lib/utils";
 import { TicketActions } from "./actions-panel";
 import { CommentBox } from "./comment-box";
 import { UploadBox } from "./upload-box";
@@ -19,14 +19,12 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   const { ticket, perms, user } = view;
 
   const holders = ticket.teams.filter((t) => t.access === "holder");
-  const teamIds = ticket.teams.map((t) => t.teamId);
   const [allTeams, people] = await Promise.all([
     prisma.team.findMany({ orderBy: { name: "asc" } }),
-    // اللي يقدروا يشوفوا التيكت — للمنشن والإسناد
+    // كل المستخدمين بيشوفوا التيكت — للمنشن، والإسناد بيتفلتر تحت على التيم اللي ماسكها
     prisma.user.findMany({
       where: {
         isActive: true,
-        OR: [{ role: "manager" }, { id: ticket.createdById }, { teams: { some: { teamId: { in: teamIds } } } }],
       },
       select: { id: true, username: true, fullName: true, role: true, teams: { select: { teamId: true } } },
       orderBy: { fullName: "asc" },
@@ -44,9 +42,36 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
     ...ticket.events.map((e) => ({ kind: "event" as const, at: e.createdAt, e })),
   ].sort((a, b) => a.at.getTime() - b.at.getTime());
 
+  const since = holders.reduce<Date | null>((a, h) => (!a || h.addedAt > a ? h.addedAt : a), null);
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
+        <div className={`card flex flex-wrap items-center gap-x-4 gap-y-2 border-r-4 p-4 ${ticket.status === "closed" ? "border-r-slate-400 bg-slate-50" : "border-r-brand-500 bg-brand-50/40"}`}>
+          <span className="text-sm font-semibold text-slate-700">📍 التذكرة الآن:</span>
+          {ticket.status === "closed" ? (
+            <span className="text-sm text-slate-700">
+              مغلقة{ticket.closedAt && <> {formatSince(ticket.closedAt)}</>}
+              {ticket.closedBy && <> — أغلقها {displayName(ticket.closedBy.fullName)}</>}
+            </span>
+          ) : (
+            <>
+              <span className="flex flex-wrap items-center gap-1.5 text-sm text-slate-700">
+                لدى {holders.map((h) => <TeamChip key={h.teamId} name={h.team.name} color={h.team.color} />)}
+                {since && <span className="text-slate-500">{formatSince(since)}</span>}
+              </span>
+              <span className="text-sm text-slate-700">
+                المسؤول: <b>{ticket.assignedTo ? displayName(ticket.assignedTo.fullName) : "لم يُسند بعد"}</b>
+              </span>
+              {!perms.canAct && (
+                <span className="w-full text-xs text-slate-500">
+                  تستطيع متابعة التذكرة وإضافة تحديثات وملاحظات، أما التحويل والإسناد والإغلاق فللفريق الذي لديه التذكرة.
+                </span>
+              )}
+            </>
+          )}
+        </div>
+
         <div className="card p-6">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>

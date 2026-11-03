@@ -16,6 +16,24 @@ export function formatRemaining(deadline: Date, now: Date = new Date()) {
   return overdue ? `متأخر بـ ${parts}` : `المتبقي ${parts}`;
 }
 
+// "منذ 3 ساعات" — للمدة اللي التيكت قعدتها عند الفريق
+export function formatSince(from: Date, now: Date = new Date()) {
+  const mins = Math.max(0, Math.floor((now.getTime() - from.getTime()) / 60_000));
+  if (mins < 1) return "منذ لحظات";
+  if (mins < 60) return `منذ ${count(mins, "دقيقة", "دقيقتين", "دقائق")}`;
+  const h = Math.floor(mins / 60);
+  if (h < 24) return `منذ ${count(h, "ساعة", "ساعتين", "ساعات")}${mins % 60 ? ` و${count(mins % 60, "دقيقة", "دقيقتين", "دقائق")}` : ""}`;
+  const d = Math.floor(h / 24);
+  return `منذ ${count(d, "يوم", "يومين", "أيام")}${h % 24 ? ` و${count(h % 24, "ساعة", "ساعتين", "ساعات")}` : ""}`;
+}
+
+// العدد مع التمييز الصحيح: يوم واحد، يومين، 3 أيام، 11 يوم
+function count(n: number, one: string, two: string, few: string) {
+  if (n === 1) return one;
+  if (n === 2) return two;
+  return `${n} ${n <= 10 ? few : one}`;
+}
+
 export function formatDateTime(d: Date) {
   return new Intl.DateTimeFormat("ar-EG", {
     dateStyle: "medium",
