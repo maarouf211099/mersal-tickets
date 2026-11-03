@@ -139,13 +139,13 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
           <div className="flex-1" />
 
           {/* Quick Action Buttons - "جديد" */}
-          <div className="hidden xl:flex items-center gap-2">
+          <div className="hidden min-[1440px]:flex items-center gap-2">
             {user.role !== "viewer" && <QuickAdd href="/tickets/new" label="تذكرة" color="teal" />}
             <QuickAdd href="/approvals/new" label="موافقة" color="gold" />
           </div>
 
           {/* Search */}
-          <form onSubmit={submitSearch} className="hidden 2xl:block">
+          <form onSubmit={submitSearch} className="hidden min-[1700px]:block">
             <div className="relative group">
               <SearchIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 transition-colors group-focus-within:text-brand-600" />
               <input
@@ -262,15 +262,18 @@ function NavLink({ href, label, icon: Icon, active, badge }: {
   return (
     <Link
       href={href}
+      title={label}
+      aria-label={label}
       className={cn(
-        "group relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+        "group relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
         active
           ? "bg-brand-50 text-brand-700"
           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
       )}
     >
       <Icon className={cn("h-4 w-4 transition-transform duration-200", active ? "" : "group-hover:scale-110")} />
-      <span>{label}</span>
+      {/* على الشاشات المتوسطة الأيقونة بس — الاسم بيظهر في التلميح */}
+      <span className="hidden xl:inline">{label}</span>
       {typeof badge === "number" && badge > 0 && (
         <span className="ml-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white animate-pulse-scale">
           {badge > 99 ? "99+" : badge}
