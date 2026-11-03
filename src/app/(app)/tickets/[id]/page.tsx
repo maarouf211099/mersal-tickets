@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTicketForView } from "@/actions/tickets";
 import { isManager } from "@/lib/access";
-import { SOURCE_LABELS, TRIAGE_LABELS, TYPE_LABELS, slaState, transferTargets } from "@/lib/workflow";
+import { EGYPTIAN, SOURCE_LABELS, TRIAGE_LABELS, TYPE_LABELS, slaState, transferTargets } from "@/lib/workflow";
 import { SlaBadge, StatusBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
 import { displayName, formatBytes, formatDateTime } from "@/lib/utils";
@@ -80,8 +80,8 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
             <Info label="كود الحالة" mono>{ticket.caseCode ?? "—"}</Info>
             <Info label="صلة القرابة">{ticket.relationship}</Info>
             <Info label="الجنسية">{ticket.nationality}</Info>
-            {ticket.nationalId
-              ? <Info label="الرقم القومي" mono>{ticket.nationalId}</Info>
+            {ticket.nationality === EGYPTIAN
+              ? <Info label="الرقم القومي" mono>{ticket.nationalId ?? "—"}</Info>
               : <Info label="رقم المفوضية" mono>{ticket.unhcrNumber ?? "—"}</Info>}
             <Info label="المصدر">{SOURCE_LABELS[ticket.source]}</Info>
             <Info label="النوع">{TYPE_LABELS[ticket.type]}</Info>

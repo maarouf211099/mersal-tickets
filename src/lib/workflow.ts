@@ -160,13 +160,11 @@ export function normalizeDigits(s: string): string {
   });
 }
 
-// مصري → رقم قومي 14 رقم. غير مصري → رقم المفوضية إجباري.
-export function identityError(nationality: string, nationalId: string, unhcrNumber: string): string | null {
-  if (nationality === EGYPTIAN) {
-    if (!/^\d{14}$/.test(nationalId)) return "يجب أن يتكون الرقم القومي من 14 رقمًا";
-    return null;
+// الرقم القومي ورقم المفوضية اختياريين. لو الرقم القومي اتكتب لازم يبقى 14 رقم.
+export function identityError(nationality: string, nationalId: string, _unhcrNumber: string): string | null {
+  if (nationality === EGYPTIAN && nationalId && !/^\d{14}$/.test(nationalId)) {
+    return "يجب أن يتكون الرقم القومي من 14 رقمًا";
   }
-  if (unhcrNumber.trim().length < 3) return "رقم المفوضية مطلوب لغير المصريين";
   return null;
 }
 

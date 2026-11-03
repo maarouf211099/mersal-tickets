@@ -56,7 +56,8 @@ test("research decision", () => {
 test("identity validation", () => {
   assert.equal(identityError(EGYPTIAN, "29001011234567", ""), null);
   assert.ok(identityError(EGYPTIAN, "123", ""));
-  assert.ok(identityError("سوداني", "", ""));
+  assert.equal(identityError(EGYPTIAN, "", ""), null);
+  assert.equal(identityError("سوداني", "", ""), null);
   assert.equal(identityError("سوداني", "", "555-12C34567"), null);
   assert.equal(normalizeDigits("٢٩٠٠١٠١١٢٣٤٥٦٧"), "29001011234567");
 });

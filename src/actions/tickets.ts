@@ -105,8 +105,8 @@ function readDetails(form: FormData) {
       caseCode: d.caseCode || null,
       relationship: d.relationship,
       nationality: d.nationality,
-      nationalId: egyptian ? d.nationalId : null,
-      unhcrNumber: egyptian ? null : d.unhcrNumber,
+      nationalId: egyptian ? d.nationalId || null : null,
+      unhcrNumber: egyptian ? null : d.unhcrNumber || null,
       description: d.description || null,
     },
   } as const;

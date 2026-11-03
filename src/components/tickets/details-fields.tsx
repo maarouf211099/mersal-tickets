@@ -53,13 +53,13 @@ export function DetailsFields({ d = {} }: { d?: DetailsDefaults }) {
       </div>
       {nationality && (egyptian ? (
         <div>
-          <Label htmlFor="nationalId" required>الرقم القومي (14 رقمًا)</Label>
-          <Input id="nationalId" name="nationalId" required inputMode="numeric" dir="ltr" maxLength={20} defaultValue={d.nationalId ?? ""} />
+          <Label htmlFor="nationalId">الرقم القومي (14 رقمًا — اختياري)</Label>
+          <Input id="nationalId" name="nationalId" inputMode="numeric" dir="ltr" maxLength={20} defaultValue={d.nationalId ?? ""} />
         </div>
       ) : (
         <div>
-          <Label htmlFor="unhcrNumber" required>رقم المفوضية</Label>
-          <Input id="unhcrNumber" name="unhcrNumber" required dir="ltr" defaultValue={d.unhcrNumber ?? ""} />
+          <Label htmlFor="unhcrNumber">رقم المفوضية (اختياري)</Label>
+          <Input id="unhcrNumber" name="unhcrNumber" dir="ltr" defaultValue={d.unhcrNumber ?? ""} />
         </div>
       ))}
       <div className="md:col-span-2">
