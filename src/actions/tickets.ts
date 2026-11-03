@@ -6,6 +6,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser, type SessionUser } from "@/lib/auth";
 import { isManager, ticketPermissions, ticketScope } from "@/lib/access";
+import { logSystem } from "@/lib/audit";
 import { nextTicketNumber } from "@/lib/ticket-number";
 import { notify, teamMemberIds } from "@/lib/notify";
 import { pickFiles, removeStoredFile, saveFile, validateFiles } from "@/lib/storage";
@@ -237,7 +238,7 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
   return guard(async () => {
     const user = await requireUser();
     const { ticket, perms } = await loadWithPerms(user, ticketId);
-    if (!perms.canAct) return { ok: false, error: "التذكرة ليست لدى فريقك" };
+    if (!perms.canAct) return { ok: false, error: "غير مصرح" };
 
     const holders = ticket.teams.filter((t) => t.access === "holder");
     const allTeams = await prisma.team.findMany();
@@ -245,8 +246,9 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
       .find((t) => t.id === targetTeamId);
     if (!target) return { ok: false, error: "لا يُسمح لك بالتحويل إلى هذا الفريق" };
 
-    // التيمات اللي بتسلّم: تيمات المستخدم اللي ماسكة التيكت (المدير: كل الماسكين)
-    const from = isManager(user) ? holders : holders.filter((h) => user.teamIds.includes(h.teamId));
+    // التيمات اللي بتسلّم: تيمات المستخدم اللي ماسكة التيكت — ولو هو مش منها (أو مدير) كل الماسكين
+    const mineHolding = holders.filter((h) => user.teamIds.includes(h.teamId));
+    const from = isManager(user) || mineHolding.length === 0 ? holders : mineHolding;
     const fromIds = from.map((h) => h.teamId);
     // لو التيم الجديد مقيد على تيم المحوِّل (زي الهوت لاين دكتور) — التيم المحوِّل يفضل متابع
     const keepObserving = target.transferOnlyFromId && fromIds.includes(target.transferOnlyFromId)
@@ -513,7 +515,8 @@ export async function deleteTicket(ticketId: string): Promise<Result> {
     const user = await requireUser();
     if (!isManager(user)) return { ok: false, error: "هذا الإجراء للمدير فقط" };
     const files = await prisma.attachment.findMany({ where: { ticketId }, select: { storageKey: true } });
-    await prisma.ticket.delete({ where: { id: ticketId } });
+    const gone = await prisma.ticket.delete({ where: { id: ticketId } });
+    await logSystem(user.id, "ticket_deleted", { ticketNumber: gone.ticketNumber, beneficiaryName: gone.beneficiaryName });
     await Promise.all(files.map((f) => removeStoredFile(f.storageKey)));
     refresh();
     return { ok: true };

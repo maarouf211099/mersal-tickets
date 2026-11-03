@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { endSession, startSession } from "@/lib/auth";
+import { logSystem } from "@/lib/audit";
 
 // حماية بسيطة من تخمين كلمة المرور: 8 محاولات غلط كل 10 دقايق لكل يوزر/IP
 const attempts = new Map<string, { n: number; until: number }>();
@@ -26,10 +27,12 @@ export async function login(_prev: { error?: string } | undefined, form: FormDat
   const ok = !!user && user.isActive && (await bcrypt.compare(password, user.passwordHash));
   if (!ok) {
     attempts.set(key, { n: (a && a.until > now ? a.n : 0) + 1, until: now + WINDOW_MS });
+    await logSystem(null, "login_failed", { username });
     return { error: "اسم المستخدم أو كلمة المرور غير صحيحة" };
   }
   attempts.delete(key);
   await startSession(user.id);
+  await logSystem(user.id, "login");
   const safe = /^\/(?![\/\\])/.test(next) && !next.includes("\\");
   redirect(safe ? next : "/dashboard");
 }

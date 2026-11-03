@@ -5,6 +5,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth, requireUser } from "@/lib/auth";
+import { logSystem } from "@/lib/audit";
 
 const schema = z.object({
   currentPassword: z.string().min(1, "يُرجى إدخال كلمة المرور الحالية"),
@@ -29,6 +30,7 @@ export async function changeMyPassword(input: unknown) {
     where: { id: me.id },
     data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 10), mustChangePassword: false },
   });
+  await logSystem(me.id, "password_changed");
   revalidatePath("/", "layout");
   return { ok: true as const };
 }
@@ -38,6 +40,7 @@ export async function updateMyName(fullName: string) {
   const name = fullName.trim();
   if (name.length < 2) return { ok: false as const, error: "الاسم قصير" };
   await prisma.user.update({ where: { id: me.id }, data: { fullName: name } });
+  if (name !== me.name) await logSystem(me.id, "name_changed", { from: me.name, to: name });
   revalidatePath("/account");
   return { ok: true as const };
 }

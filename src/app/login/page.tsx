@@ -6,7 +6,7 @@ import { LoginForm } from "./form";
 const FEATURES = [
   { icon: ClockIcon, title: "متابعة مهلة الإنجاز", text: "تنبيه فوري قبل تأخر أي حالة، وأولوية واضحة للطوارئ" },
   { icon: ShareIcon, title: "تحويل بين الفرق", text: "كل حالة تنتقل بسجلها الكامل من فريق إلى آخر" },
-  { icon: ShieldIcon, title: "كل حالة في مكانها", text: "الكل يتابع، والفريق المسؤول وحده يحوّل ويُغلق" },
+  { icon: ShieldIcon, title: "كل تعديل مسجَّل", text: "سجل كامل يوضح من عدّل ماذا ومتى" },
 ];
 
 export default function LoginPage() {

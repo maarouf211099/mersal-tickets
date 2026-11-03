@@ -113,6 +113,7 @@ model User {
   notifications     Notification[]
   createdApprovals  Approval[]      @relation("CreatedApprovals")
   reviewedApprovals Approval[]      @relation("ReviewedApprovals")
+  systemEvents      SystemEvent[]
 }
 
 model TeamMember {
@@ -250,6 +251,21 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([createdAt])
+}
+
+// السجل العام للنظام: الدخول، المستخدمين، الفرق، الموافقات، حذف التذاكر
+// (أحداث التذاكر نفسها في TicketEvent)
+model SystemEvent {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  metadata  Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
 }
 
 model TicketCounter {

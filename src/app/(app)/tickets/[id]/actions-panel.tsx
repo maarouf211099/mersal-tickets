@@ -87,7 +87,7 @@ export function TicketActions(p: Props) {
               🗑️ حذف نهائي (للمدير)
             </Button>
           )}
-          {nothing && <p className="text-xs text-slate-500">التذكرة ليست لدى فريقك — يمكنك متابعتها وإضافة تحديثات فقط.</p>}
+          {nothing && <p className="text-xs text-slate-500">حسابك للمشاهدة فقط — يمكنك متابعة التذكرة دون تعديلها.</p>}
         </div>
       </Card>
     </div>

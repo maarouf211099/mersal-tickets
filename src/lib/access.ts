@@ -31,14 +31,13 @@ type TicketForAccess = {
 
 export function ticketPermissions(u: SessionUser, t: TicketForAccess) {
   const manager = isManager(u);
-  const mine = new Set(u.teamIds);
   const holders = t.teams.filter((x) => x.access === "holder");
   const holderCodes = holders.map((h) => h.team.code);
-  const myHolder = holders.some((h) => mine.has(h.teamId));
   const canView = true;
   const pending = t.status === "pending";
   const writer = u.role !== "viewer";
-  const canAct = pending && writer && (manager || myHolder);
+  // أي مستخدم (غير المشاهد) يقدر يتصرف في أي تيكت مفتوحة — وكل تصرف بيتسجل في السجل باسمه
+  const canAct = pending && writer;
   const memberOf = (code: string) => manager || u.teamCodes.includes(code);
 
   return {

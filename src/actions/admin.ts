@@ -5,6 +5,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { logSystem } from "@/lib/audit";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -24,6 +25,7 @@ const fail = (e: unknown): Result => ({ ok: false, error: e instanceof Error ? e
 
 // ─── المستخدمين ───────────────────────────────────────────
 const roles = z.enum(["manager", "supervisor", "agent", "viewer"]);
+const ROLE_AR: Record<string, string> = { manager: "مدير", supervisor: "مشرف", agent: "موظف", viewer: "مشاهد" };
 
 const userSchema = z.object({
   username: z.string().trim().toLowerCase().min(2, "اسم المستخدم قصير")
@@ -38,7 +40,7 @@ const userSchema = z.object({
 
 export async function createUser(input: unknown): Promise<Result> {
   try {
-    await requireManager();
+    const me = await requireManager();
     const parsed = userSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "خطأ" };
     const d = parsed.data;
@@ -53,6 +55,7 @@ export async function createUser(input: unknown): Promise<Result> {
         teams: { create: d.teamIds.map((teamId) => ({ teamId })) },
       },
     });
+    await logSystem(me.id, "user_created", { name: d.fullName, username: d.username, role: d.role });
     return done();
   } catch (e) { return fail(e); }
 }
@@ -75,6 +78,9 @@ export async function updateUser(userId: string, input: unknown): Promise<Result
     if (userId === me.id && (d.role !== "manager" || !d.isActive)) {
       return { ok: false, error: "لا يمكنك إزالة صلاحية المدير عن حسابك أو إيقافه" };
     }
+    const before = await prisma.user.findUniqueOrThrow({
+      where: { id: userId }, include: { teams: { include: { team: { select: { id: true, name: true } } } } },
+    });
     await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
@@ -83,15 +89,30 @@ export async function updateUser(userId: string, input: unknown): Promise<Result
       prisma.teamMember.deleteMany({ where: { userId } }),
       prisma.teamMember.createMany({ data: d.teamIds.map((teamId) => ({ userId, teamId })) }),
     ]);
+    const teamNames = async (ids: string[]) =>
+      (await prisma.team.findMany({ where: { id: { in: ids } }, select: { name: true }, orderBy: { name: "asc" } })).map((t) => t.name).join(" + ") || "—";
+    const yes = (b: boolean) => (b ? "نعم" : "لا");
+    const changes: { label: string; from: string; to: string }[] = [];
+    if (before.fullName !== d.fullName) changes.push({ label: "الاسم", from: before.fullName, to: d.fullName });
+    if (before.role !== d.role) changes.push({ label: "الدور", from: ROLE_AR[before.role], to: ROLE_AR[d.role] });
+    const beforeTeams = before.teams.map((t) => t.team.id).sort().join();
+    if (beforeTeams !== [...d.teamIds].sort().join()) {
+      changes.push({ label: "الفرق", from: await teamNames(before.teams.map((t) => t.team.id)), to: await teamNames(d.teamIds) });
+    }
+    if (before.canReopen !== d.canReopen) changes.push({ label: "إعادة الفتح", from: yes(before.canReopen), to: yes(d.canReopen) });
+    if (before.canExport !== d.canExport) changes.push({ label: "التصدير", from: yes(before.canExport), to: yes(d.canExport) });
+    if (before.isActive !== d.isActive) changes.push({ label: "نشط", from: yes(before.isActive), to: yes(d.isActive) });
+    if (changes.length) await logSystem(me.id, "user_updated", { name: d.fullName, username: before.username, changes });
     return done();
   } catch (e) { return fail(e); }
 }
 
 export async function resetPassword(userId: string, password: string): Promise<Result> {
   try {
-    await requireManager();
+    const me = await requireManager();
     if (password.length < 8) return { ok: false, error: "يجب ألا تقل كلمة المرور عن 8 أحرف" };
-    await prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(password, 10), mustChangePassword: true } });
+    const u = await prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(password, 10), mustChangePassword: true } });
+    await logSystem(me.id, "password_reset", { name: u.fullName, username: u.username });
     return done();
   } catch (e) { return fail(e); }
 }
@@ -104,7 +125,7 @@ export type ImportResult =
 
 export async function importUsers(input: { lines: string; password: string; role: string }): Promise<ImportResult> {
   try {
-    await requireManager();
+    const me = await requireManager();
     if (input.password.length < 8) return { ok: false, error: "يجب ألا تقل كلمة المرور المؤقتة عن 8 أحرف" };
     const role = roles.safeParse(input.role);
     if (!role.success) return { ok: false, error: "دور غير صحيح" };
@@ -158,6 +179,7 @@ export async function importUsers(input: { lines: string; password: string; role
       });
       created++;
     }
+    if (created > 0) await logSystem(me.id, "users_imported", { created });
     revalidatePath("/admin/users");
     return { ok: true, created, skipped };
   } catch (e) { return fail(e) as ImportResult; }
@@ -175,15 +197,29 @@ const teamSchema = z.object({
 
 export async function saveTeam(teamId: string | null, input: unknown): Promise<Result> {
   try {
-    await requireManager();
+    const me = await requireManager();
     const parsed = teamSchema.safeParse(input);
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "خطأ" };
     const d = { ...parsed.data, description: parsed.data.description || null };
     if (teamId && d.transferOnlyFromId === teamId) return { ok: false, error: "لا يمكن تقييد الفريق على نفسه" };
     const clash = await prisma.team.findFirst({ where: { name: d.name, NOT: teamId ? { id: teamId } : undefined } });
     if (clash) return { ok: false, error: "يوجد فريق بالاسم نفسه" };
-    if (teamId) await prisma.team.update({ where: { id: teamId }, data: d });
-    else await prisma.team.create({ data: d });
+    if (teamId) {
+      const before = await prisma.team.findUniqueOrThrow({ where: { id: teamId } });
+      await prisma.team.update({ where: { id: teamId }, data: d });
+      const yes = (b: boolean) => (b ? "نعم" : "لا");
+      const changes: { label: string; from: string; to: string }[] = [];
+      if (before.name !== d.name) changes.push({ label: "الاسم", from: before.name, to: d.name });
+      if ((before.description ?? "") !== (d.description ?? "")) changes.push({ label: "الوصف", from: before.description ?? "—", to: d.description ?? "—" });
+      if (before.isActive !== d.isActive) changes.push({ label: "نشط", from: yes(before.isActive), to: yes(d.isActive) });
+      if (before.isReceiver !== d.isReceiver) changes.push({ label: "فريق استقبال", from: yes(before.isReceiver), to: yes(d.isReceiver) });
+      if (before.color !== d.color) changes.push({ label: "اللون", from: before.color, to: d.color });
+      if (before.transferOnlyFromId !== d.transferOnlyFromId) changes.push({ label: "قيد التحويل", from: before.transferOnlyFromId ? "مقيد" : "—", to: d.transferOnlyFromId ? "مقيد" : "—" });
+      if (changes.length) await logSystem(me.id, "team_updated", { name: d.name, changes });
+    } else {
+      await prisma.team.create({ data: d });
+      await logSystem(me.id, "team_created", { name: d.name });
+    }
     revalidatePath("/tickets");
     return done();
   } catch (e) { return fail(e); }

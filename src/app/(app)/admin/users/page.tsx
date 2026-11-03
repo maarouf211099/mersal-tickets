@@ -20,7 +20,7 @@ export default async function UsersPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">المستخدمون</h1>
-        <p className="mt-1 text-sm text-slate-500">يطّلع كل المستخدمين على كل التذاكر، أما التحويل والإسناد والإغلاق فللفريق الذي لديه التذكرة.</p>
+        <p className="mt-1 text-sm text-slate-500">يطّلع كل المستخدمين على كل التذاكر ويعدّلون فيها، ويُسجَّل كل تعديل باسم صاحبه في السجل.</p>
       </div>
       <UsersClient
         meId={s.user.id}

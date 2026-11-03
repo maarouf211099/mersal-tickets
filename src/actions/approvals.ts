@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logSystem } from "@/lib/audit";
 import { canAccessCategory, canReviewApproval, type ApprovalPerms } from "@/lib/approval-permissions";
 import { nextApprovalNumber } from "@/lib/approval-number";
 import type { ApprovalCategory, ApprovalStatus } from "@prisma/client";
@@ -12,6 +13,7 @@ import type { ApprovalCategory, ApprovalStatus } from "@prisma/client";
 async function requireUser() {
   const s = await auth();
   if (!s?.user) throw new Error("غير مسجَّل الدخول");
+  if (s.user.mustChangePassword) throw new Error("يجب تغيير كلمة المرور أولًا");
   return s.user;
 }
 
@@ -68,6 +70,7 @@ export async function createApproval(input: unknown) {
     },
   });
 
+  await logSystem(user.id, "approval_created", { number: approval.approvalNumber, patientName: approval.patientName });
   revalidatePath("/approvals");
   return { ok: true as const, approvalId: approval.id };
 }
@@ -85,7 +88,7 @@ export async function reviewApproval(id: string, input: unknown) {
   const parsed = reviewSchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "خطأ" };
 
-  await prisma.approval.update({
+  const reviewed = await prisma.approval.update({
     where: { id },
     data: {
       status:          parsed.data.status as ApprovalStatus,
@@ -95,6 +98,7 @@ export async function reviewApproval(id: string, input: unknown) {
       reviewedAt:      new Date(),
     },
   });
+  await logSystem(user.id, "approval_reviewed", { number: reviewed.approvalNumber, status: parsed.data.status });
   revalidatePath("/approvals");
   revalidatePath(`/approvals/${id}`);
   return { ok: true as const };
@@ -114,7 +118,7 @@ export async function updateReceipt(id: string, input: unknown) {
   const parsed = receiptSchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "خطأ" };
 
-  await prisma.approval.update({
+  const updated = await prisma.approval.update({
     where: { id },
     data: {
       receiptStatus:      parsed.data.receiptStatus ?? null,
@@ -123,6 +127,7 @@ export async function updateReceipt(id: string, input: unknown) {
       finalNotes:         parsed.data.finalNotes ?? null,
     },
   });
+  await logSystem(user.id, "approval_receipt", { number: updated.approvalNumber });
   revalidatePath(`/approvals/${id}`);
   return { ok: true as const };
 }
@@ -130,7 +135,8 @@ export async function updateReceipt(id: string, input: unknown) {
 export async function deleteApproval(id: string) {
   const user = await requireUser();
   if (user.role !== "manager") throw new Error("غير مصرح");
-  await prisma.approval.delete({ where: { id } });
+  const gone = await prisma.approval.delete({ where: { id } });
+  await logSystem(user.id, "approval_deleted", { number: gone.approvalNumber });
   revalidatePath("/approvals");
 }
 
@@ -143,10 +149,11 @@ export async function updateApprovalPerms(userId: string, perms: unknown) {
   const parsed = permsSchema.safeParse(perms);
   if (!parsed.success) return { ok: false as const, error: "بيانات غير صحيحة" };
 
-  await prisma.user.update({
+  const target = await prisma.user.update({
     where: { id: userId },
     data:  { approvalPerms: parsed.data },
   });
+  await logSystem(user.id, "approval_perms_updated", { name: target.fullName });
   revalidatePath("/admin/users");
   return { ok: true as const };
 }

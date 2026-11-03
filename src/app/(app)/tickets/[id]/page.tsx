@@ -9,6 +9,7 @@ import { displayName, formatBytes, formatDateTime, formatSince } from "@/lib/uti
 import { TicketActions } from "./actions-panel";
 import { CommentBox } from "./comment-box";
 import { UploadBox } from "./upload-box";
+import { describeEvent } from "@/lib/event-text";
 
 export const dynamic = "force-dynamic";
 
@@ -63,9 +64,9 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               <span className="text-sm text-slate-700">
                 المسؤول: <b>{ticket.assignedTo ? displayName(ticket.assignedTo.fullName) : "لم يُسند بعد"}</b>
               </span>
-              {!perms.canAct && (
+              {perms.canAct && !holders.some((h) => user.teamIds.includes(h.teamId)) && (
                 <span className="w-full text-xs text-slate-500">
-                  تستطيع متابعة التذكرة وإضافة تحديثات وملاحظات، أما التحويل والإسناد والإغلاق فللفريق الذي لديه التذكرة.
+                  التذكرة ليست لدى فريقك — يمكنك التعديل عليها، وكل تعديل يُسجَّل باسمك في سجل التذكرة.
                 </span>
               )}
             </>
@@ -243,27 +244,3 @@ const EVENT_DOT: Record<string, string> = {
   reopened: "bg-amber-500",
   sla_breached: "bg-red-600",
 };
-
-type Meta = Record<string, unknown> | null;
-function describeEvent(action: string, metadata: unknown): string {
-  const m = (metadata ?? {}) as NonNullable<Meta>;
-  const list = (v: unknown) => (Array.isArray(v) ? v.join(" + ") : String(v ?? ""));
-  const withNote = (s: string, note: unknown) => (note ? `${s} — "${note}"` : s);
-  switch (action) {
-    case "created": return `أُنشئت التذكرة وحُوِّلت إلى ${m.to}`;
-    case "transferred": return withNote(`حُوِّلت من ${list(m.from) || "—"} إلى ${m.to}`, m.note);
-    case "triaged": return withNote(`صنّفها طبيب الخط الساخن حالةً ${m.level === "urgent" ? "عاجلة" : "طارئة"} ← ${list(m.to)}`, m.note);
-    case "research_accepted": return withNote(`قبلت الأبحاث الحالة ← ${list(m.to)}`, m.comment);
-    case "research_rejected": return withNote("رفضت الأبحاث الحالة وأُغلقت التذكرة", m.comment);
-    case "closed": return withNote("أُغلقت التذكرة", m.reason);
-    case "reopened": return withNote("أُعيد فتح التذكرة", m.note);
-    case "assigned": return m.to ? `أُسندت إلى ${m.to}` : "أُلغي الإسناد";
-    case "attachment_added": return `أُضيف مرفق: ${list(m.files)}`;
-    case "sla_breached": return "⛔ تجاوزت التذكرة مهلة الإنجاز";
-    case "details_updated": {
-      const changes = (m.changes as { label: string; from: string | null; to: string | null }[]) ?? [];
-      return "تعديل البيانات: " + changes.map((c) => `${c.label} (${c.from ?? "—"} ← ${c.to ?? "—"})`).join("، ");
-    }
-    default: return action;
-  }
-}
