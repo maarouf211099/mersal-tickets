@@ -12,7 +12,7 @@ export type TicketFilters = {
 // نفس الفلاتر للقائمة وللتصدير — والـ scope دايماً بيتطبق
 export function buildTicketWhere(user: SessionUser, f: TicketFilters): Prisma.TicketWhereInput {
   const and: Prisma.TicketWhereInput[] = [ticketScope(user)];
-  const status = f.status ?? "pending";
+  const status = f.status ?? "all";
   if (status === "pending" || status === "closed") and.push({ status });
   if (f.type === "new_case" || f.type === "follow_up" || f.type === "emergency") and.push({ type: f.type });
   if (f.source === "call_center" || f.source === "social_media" || f.source === "reception" || f.source === "clinics") {

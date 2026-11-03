@@ -25,7 +25,10 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
     prisma.ticket.count({ where }),
     prisma.ticket.findMany({
       where,
-      orderBy: (f.status ?? "pending") === "pending" ? { slaDeadline: "asc" } : { closedAt: "desc" },
+      // الكل: المفتوحة الأول (الأقرب لانتهاء المهلة)، وبعدها المغلقة الأحدث فالأقدم
+      orderBy: f.status === "pending" ? [{ slaDeadline: "asc" }]
+        : f.status === "closed" ? [{ closedAt: "desc" }]
+        : [{ status: "asc" }, { closedAt: { sort: "desc", nulls: "first" } }, { slaDeadline: "asc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {
@@ -35,7 +38,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
       },
     }),
     prisma.team.findMany({
-      where: { isActive: true, ...(isManager(user) ? {} : { id: { in: user.teamIds } }) },
+      where: { isActive: true },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -70,7 +73,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
 
       <form className="card grid grid-cols-2 gap-3 p-4 md:grid-cols-7" method="get">
         <Input name="q" defaultValue={f.q ?? ""} placeholder="بحث: الاسم، الهاتف، الكود، الرقم القومي..." className="col-span-2" />
-        <Select name="status" defaultValue={f.status ?? "pending"}>
+        <Select name="status" defaultValue={f.status ?? "all"}>
           <option value="pending">قيد التنفيذ</option>
           <option value="closed">مغلقة</option>
           <option value="all">الكل</option>

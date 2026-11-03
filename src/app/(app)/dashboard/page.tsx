@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, myWorkScope } from "@/lib/access";
+import { ticketScope } from "@/lib/access";
 import { TYPE_LABELS, slaLabel, slaState, type TicketType } from "@/lib/workflow";
 import { SlaBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   const s = await auth();
   if (!s) redirect("/login");
   const { user } = s;
-  const scope = myWorkScope(user);
+  const scope = ticketScope(user);
   const now = new Date();
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
@@ -32,7 +32,7 @@ export default async function DashboardPage() {
       include: { teams: { where: { access: "holder" }, include: { team: true } } },
     }),
     prisma.team.findMany({
-      where: { isActive: true, ...(isManager(user) ? {} : { id: { in: user.teamIds } }) },
+      where: { isActive: true },
       orderBy: { name: "asc" },
       include: { _count: { select: { tickets: { where: { access: "holder", ticket: { status: "pending" } } } } } },
     }),
@@ -54,7 +54,7 @@ export default async function DashboardPage() {
             <p className="text-sm text-brand-100">{today}</p>
             <h1 className="mt-1 text-2xl font-bold">مرحبًا، {user.name} 👋</h1>
             <p className="mt-1 text-sm text-brand-50/90">
-              {totalPending === 0 ? "لا توجد تذاكر مفتوحة الآن" : `لديك ${totalPending} تذكرة قيد التنفيذ`}
+              {totalPending === 0 ? "لا توجد تذاكر مفتوحة الآن" : `يوجد ${totalPending} تذكرة قيد التنفيذ في النظام`}
               {breached > 0 && <span className="font-semibold text-accent-200"> — منها {breached} تجاوزت المهلة</span>}
             </p>
           </div>
@@ -65,9 +65,9 @@ export default async function DashboardPage() {
       </div>
 
       <div className="stagger grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Stat label="قيد التنفيذ" value={totalPending} href="/tickets" icon={InboxIcon} tone="brand" />
+        <Stat label="قيد التنفيذ" value={totalPending} href="/tickets?status=pending" icon={InboxIcon} tone="brand" />
         <Stat label="متجاوزة لمهلة الإنجاز" value={breached} href="/tickets?sla=breached" icon={AlarmIcon} tone="red" />
-        <Stat label="مسندة إليّ" value={mine} href="/tickets?mine=1" icon={UserCheckIcon} tone="violet" />
+        <Stat label="مسندة إليّ" value={mine} href="/tickets?status=pending&mine=1" icon={UserCheckIcon} tone="violet" />
         <Stat label="أُغلقت اليوم" value={closedToday} href="/tickets?status=closed" icon={CheckCircleIcon} tone="emerald" />
       </div>
 
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
           const n = count(t);
           const pct = totalPending ? Math.round((n / totalPending) * 100) : 0;
           return (
-            <Link key={t} href={`/tickets?type=${t}`} className={`card card-hover group border-t-4 p-4 ${TYPE_STYLE[t].border}`}>
+            <Link key={t} href={`/tickets?status=pending&type=${t}`} className={`card card-hover group border-t-4 p-4 ${TYPE_STYLE[t].border}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg transition-transform duration-300 group-hover:scale-110 ${TYPE_STYLE[t].tile}`}>
@@ -149,7 +149,7 @@ export default async function DashboardPage() {
               const n = t._count.tickets;
               return (
                 <li key={t.id}>
-                  <Link href={`/tickets?teamId=${t.id}`} className={`block rounded-lg px-2 py-2 hover:bg-slate-50 ${n === 0 ? "opacity-60" : ""}`}>
+                  <Link href={`/tickets?status=pending&teamId=${t.id}`} className={`block rounded-lg px-2 py-2 hover:bg-slate-50 ${n === 0 ? "opacity-60" : ""}`}>
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2 font-medium text-slate-700">
                         <span className="h-2.5 w-2.5 rounded-full" style={{ background: t.color }} />
@@ -164,7 +164,7 @@ export default async function DashboardPage() {
                 </li>
               );
             })}
-            {teams.length === 0 && <li className="text-sm text-slate-400">لست عضوًا في أي فريق — تواصل مع المدير</li>}
+            {teams.length === 0 && <li className="text-sm text-slate-400">لا توجد فرق</li>}
           </ul>
         </div>
       </div>
