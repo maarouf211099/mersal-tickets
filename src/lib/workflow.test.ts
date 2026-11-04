@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   slaDeadlineFor, slaState, transferTargets, triageHolders, researchOutcome,
-  identityError, normalizeDigits, parseMentions, TEAM, EGYPTIAN, type TeamLite,
+  identityError, normalizeDigits, parseMentions, slaDeadlineAfterTransfer, TEAM, EGYPTIAN, type TeamLite,
 } from "./workflow.ts";
 
 const t0 = new Date("2026-01-01T10:00:00Z");
@@ -51,6 +51,12 @@ test("triage routing", () => {
 test("research decision", () => {
   assert.deepEqual(researchOutcome("rejected"), { close: true, addHolders: [], requiresComment: true });
   assert.deepEqual(researchOutcome("accepted").addHolders, [TEAM.FOLLOWUP_DOCTOR]);
+});
+
+test("emergency transferred to registration gets 48h from transfer", () => {
+  assert.deepEqual(slaDeadlineAfterTransfer("emergency", TEAM.REGISTRATION, t0), mins(48 * 60));
+  assert.equal(slaDeadlineAfterTransfer("emergency", TEAM.ALEXANDRIA, t0), null);
+  assert.equal(slaDeadlineAfterTransfer("new_case", TEAM.REGISTRATION, t0), null);
 });
 
 test("identity validation", () => {

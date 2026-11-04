@@ -12,7 +12,7 @@ import { notify, teamMemberIds } from "@/lib/notify";
 import { pickFiles, removeStoredFile, saveFile, validateFiles } from "@/lib/storage";
 import {
   EGYPTIAN, TEAM, TRIAGE_LABELS, identityError, normalizeDigits, parseMentions,
-  researchOutcome, slaDeadlineFor, transferTargets, triageHolders,
+  OUTBOUND_EMERGENCY_SLA_MINUTES, researchOutcome, slaDeadlineAfterTransfer, slaDeadlineFor, transferTargets, triageHolders,
 } from "@/lib/workflow";
 
 type Result = { ok: true; warning?: string } | { ok: false; error: string };
@@ -253,6 +253,7 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
     // لو التيم الجديد مقيد على تيم المحوِّل (زي الهوت لاين دكتور) — التيم المحوِّل يفضل متابع
     const keepObserving = target.transferOnlyFromId && fromIds.includes(target.transferOnlyFromId)
       ? [target.transferOnlyFromId] : [];
+    const newDeadline = ticket.status === "pending" ? slaDeadlineAfterTransfer(ticket.type, target.code, new Date()) : null;
 
     await prisma.$transaction([
       prisma.ticketTeam.deleteMany({ where: { ticketId, teamId: { in: fromIds.filter((id) => !keepObserving.includes(id)) } } }),
@@ -262,11 +263,17 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
         update: { access: "holder" },
         create: { ticketId, teamId: target.id, access: "holder" },
       }),
-      prisma.ticket.update({ where: { id: ticketId }, data: { assignedToId: null } }),
+      prisma.ticket.update({
+        where: { id: ticketId },
+        data: { assignedToId: null, ...(newDeadline && { slaDeadline: newDeadline, slaBreachNotifiedAt: null }) },
+      }),
       prisma.ticketEvent.create({
         data: {
           ticketId, actorId: user.id, action: "transferred",
-          metadata: { from: from.map((h) => h.team.name), to: target.name, note: note.trim() || null },
+          metadata: {
+            from: from.map((h) => h.team.name), to: target.name, note: note.trim() || null,
+            ...(newDeadline && { slaHours: OUTBOUND_EMERGENCY_SLA_MINUTES / 60 }),
+          },
         },
       }),
     ]);

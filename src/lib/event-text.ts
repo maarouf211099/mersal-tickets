@@ -8,7 +8,8 @@ export function describeEvent(action: string, metadata: unknown): string {
   const m = (metadata ?? {}) as Meta;
   switch (action) {
     case "created": return `أُنشئت التذكرة وحُوِّلت إلى ${m.to}`;
-    case "transferred": return withNote(`حُوِّلت من ${list(m.from) || "—"} إلى ${m.to}`, m.note);
+    case "transferred": return withNote(
+      `حُوِّلت من ${list(m.from) || "—"} إلى ${m.to}${m.slaHours ? ` — مهلة الإنجاز أصبحت ${m.slaHours} ساعة من وقت التحويل` : ""}`, m.note);
     case "triaged": return withNote(`صنّفها طبيب الخط الساخن حالةً ${m.level === "urgent" ? "عاجلة" : "طارئة"} ← ${list(m.to)}`, m.note);
     case "research_accepted": return withNote(`قبلت الأبحاث الحالة ← ${list(m.to)}`, m.comment);
     case "research_rejected": return withNote("رفضت الأبحاث الحالة وأُغلقت التذكرة", m.comment);

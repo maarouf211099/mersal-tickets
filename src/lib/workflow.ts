@@ -16,6 +16,16 @@ export function slaDeadlineFor(type: TicketType, createdAt: Date): Date {
   return new Date(createdAt.getTime() + SLA_MINUTES[type] * 60_000);
 }
 
+// تيكت طوارئ اتحولت للتسجيل والاتصال الخارجي → مهلتها بتبقى 48 ساعة من وقت التحويل
+export const OUTBOUND_EMERGENCY_SLA_MINUTES = 48 * 60;
+
+export function slaDeadlineAfterTransfer(type: TicketType, targetCode: string | null, at: Date): Date | null {
+  if (type === "emergency" && targetCode === TEAM.REGISTRATION) {
+    return new Date(at.getTime() + OUTBOUND_EMERGENCY_SLA_MINUTES * 60_000);
+  }
+  return null;
+}
+
 export function slaLabel(type: TicketType): string {
   const m = SLA_MINUTES[type];
   return m < 60 ? `${m} دقيقة` : `${m / 60} ساعة`;
