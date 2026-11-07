@@ -6,15 +6,20 @@ import { portalSecret, verifyPortalTicket } from "@/lib/portal-sso";
 
 export const dynamic = "force-dynamic";
 
+// تحويل نسبي (Location: /path) — مانستخدمش req.url لأن السيرفر شغال على 0.0.0.0
+// وكان التحويل بيروح لـ http://0.0.0.0:3005 بدل عنوان السيرفر الحقيقي
+function redirectTo(pathAndQuery: string) {
+  return new NextResponse(null, {
+    status: 303,
+    headers: { Location: pathAndQuery, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" },
+  });
+}
+
 // بوابة مرسال بتحوّل هنا بـ ?ticket=... — بنتأكد منها ونفتح جلسة عادية لنفس المستخدم
 export async function GET(req: NextRequest) {
   if (!portalSecret()) return new NextResponse("Not Found", { status: 404 });
 
-  const loginUrl = (err: string) => {
-    const u = new URL("/login", req.url);
-    u.searchParams.set("sso", err);
-    return NextResponse.redirect(u, 303);
-  };
+  const loginUrl = (err: "invalid" | "nouser") => redirectTo(`/login?sso=${err}`);
 
   const t = await verifyPortalTicket(req.nextUrl.searchParams.get("ticket") ?? "");
   if (!t) {
@@ -35,8 +40,5 @@ export async function GET(req: NextRequest) {
 
   const next = req.nextUrl.searchParams.get("next") ?? "";
   const safe = /^\/(?![\/\\])/.test(next) && !next.includes("\\");
-  const res = NextResponse.redirect(new URL(safe ? next : "/dashboard", req.url), 303);
-  res.headers.set("Cache-Control", "no-store");
-  res.headers.set("Referrer-Policy", "no-referrer");
-  return res;
+  return redirectTo(safe ? next : "/dashboard");
 }
