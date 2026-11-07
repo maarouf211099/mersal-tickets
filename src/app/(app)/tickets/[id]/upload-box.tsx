@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { uploadAttachments } from "@/actions/tickets";
 import { Button } from "@/components/ui/button";
 import { FileInput } from "@/components/ui/file-input";
+import { toast } from "@/components/ui/toast";
 
 export function UploadBox({ ticketId }: { ticketId: string }) {
   const router = useRouter();
@@ -21,11 +22,11 @@ export function UploadBox({ ticketId }: { ticketId: string }) {
         start(async () => {
           const r = await uploadAttachments(ticketId, form);
           if (!r.ok) setErr(r.error);
-          else { formRef.current?.reset(); setVersion((v) => v + 1); router.refresh(); }
+          else { formRef.current?.reset(); setVersion((v) => v + 1); toast("تم رفع المرفقات"); router.refresh(); }
         });
       }}>
       <FileInput key={version} required />
-      <Button size="sm" variant="secondary" disabled={pending}>{pending ? "جاري الرفع..." : "رفع"}</Button>
+      <Button size="sm" variant="secondary" loading={pending}>{pending ? "جاري الرفع..." : "رفع"}</Button>
       {err && <span className="text-xs text-red-600">{err}</span>}
     </form>
   );

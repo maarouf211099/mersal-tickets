@@ -19,11 +19,13 @@ const sizes: Record<Size, string> = {
 
 export const Button = React.forwardRef<
   HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size }
->(function Button({ className, variant = "primary", size = "md", ...props }, ref) {
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size; loading?: boolean }
+>(function Button({ className, variant = "primary", size = "md", loading, children, disabled, ...props }, ref) {
   return (
     <button
       ref={ref}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
         "inline-flex items-center justify-center font-medium transition-all duration-150 active:scale-[0.97] disabled:active:scale-100",
         "focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:ring-offset-1",
@@ -31,6 +33,9 @@ export const Button = React.forwardRef<
         variants[variant], sizes[size], className,
       )}
       {...props}
-    />
+    >
+      {loading && <span className="h-4 w-4 shrink-0 animate-spin-fast rounded-full border-2 border-current border-t-transparent opacity-70" />}
+      {children}
+    </button>
   );
 });

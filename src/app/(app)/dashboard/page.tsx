@@ -119,9 +119,9 @@ export default async function DashboardPage() {
               <thead><tr><th>التذكرة</th><th>النوع</th><th>الفريق</th><th>المهلة</th></tr></thead>
               <tbody>
                 {urgent.map((t) => (
-                  <tr key={t.id}>
+                  <tr key={t.id} className="group relative cursor-pointer">
                     <td>
-                      <Link href={`/tickets/${t.id}`} className="font-medium text-brand-700 hover:underline">{t.beneficiaryName}</Link>
+                      <Link href={`/tickets/${t.id}`} className="font-medium text-brand-700 after:absolute after:inset-0 group-hover:underline">{t.beneficiaryName}</Link>
                       <div className="font-mono text-xs text-slate-400">{t.ticketNumber}</div>
                     </td>
                     <td><TypeBadge type={t.type} /></td>

@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { addComment } from "@/actions/tickets";
 import { cn, displayName } from "@/lib/utils";
+import { toast } from "@/components/ui/toast";
 
 type Person = { username: string; fullName: string };
 
@@ -47,6 +48,7 @@ export function CommentBox({ ticketId, people }: { ticketId: string; people: Per
       const r = await addComment(ticketId, kind, body);
       if (!r.ok) { setMsg({ error: r.error }); return; }
       setBody("");
+      toast(kind === "note" ? "تمت إضافة الملاحظة" : "تمت إضافة التحديث");
       if (r.warning) setMsg({ warning: r.warning });
       router.refresh();
     });
@@ -57,7 +59,7 @@ export function CommentBox({ ticketId, people }: { ticketId: string; people: Per
       <div className="mb-2 flex gap-1 text-sm">
         {(["update", "note"] as const).map((k) => (
           <button key={k} type="button" onClick={() => setKind(k)}
-            className={cn("rounded-full px-3 py-1", kind === k
+            className={cn("rounded-full px-3 py-1 transition-colors duration-200", kind === k
               ? (k === "note" ? "bg-amber-200 text-amber-900" : "bg-slate-800 text-white")
               : "bg-slate-100 text-slate-600 hover:bg-slate-200")}>
             {k === "update" ? "🔄 تحديث" : "📝 ملاحظة"}
@@ -69,7 +71,7 @@ export function CommentBox({ ticketId, people }: { ticketId: string; people: Per
           placeholder="اكتب تحديثًا أو ملاحظة... واستخدم @ للإشارة إلى زميل"
           className={kind === "note" ? "border-amber-300 bg-amber-50/40" : ""} />
         {suggestions.length > 0 && (
-          <ul className="absolute right-2 top-full z-20 mt-1 w-64 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+          <ul className="animate-expand absolute right-2 top-full z-20 mt-1 w-64 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
             {suggestions.map((p) => (
               <li key={p.username}>
                 <button type="button" onMouseDown={(e) => { e.preventDefault(); pick(p); }}
@@ -85,7 +87,7 @@ export function CommentBox({ ticketId, people }: { ticketId: string; people: Per
       {msg?.error && <div className="mt-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">{msg.error}</div>}
       {msg?.warning && <div className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">{msg.warning}</div>}
       <div className="mt-2 flex justify-end">
-        <Button disabled={pending || body.trim().length === 0} onClick={submit}>{pending ? "..." : "إرسال"}</Button>
+        <Button disabled={body.trim().length === 0} loading={pending} onClick={submit}>إرسال</Button>
       </div>
     </div>
   );

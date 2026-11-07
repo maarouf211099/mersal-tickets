@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { RichText } from "@/components/ui/rich-text";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -100,7 +101,7 @@ export default async function ApprovalDetailPage({ params }: { params: Promise<{
                   <div key={f.key} className={f.type === "textarea" ? "sm:col-span-2" : ""}>
                     <dt className="text-xs text-slate-500">{f.label}</dt>
                     <dd className="mt-1 text-slate-800 whitespace-pre-wrap">
-                      {extra[f.key] || <span className="text-slate-400">—</span>}
+                      {extra[f.key] ? <RichText text={String(extra[f.key])} /> : <span className="text-slate-400">—</span>}
                     </dd>
                   </div>
                 ))}
@@ -112,7 +113,7 @@ export default async function ApprovalDetailPage({ params }: { params: Promise<{
           {approval.uploaderNotes && (
             <div className="card p-5">
               <h3 className="mb-2 text-sm font-semibold text-slate-700">ملاحظات القائم بالرفع</h3>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{approval.uploaderNotes}</p>
+              <p className="text-sm text-slate-700 leading-relaxed"><RichText text={approval.uploaderNotes} /></p>
             </div>
           )}
 
@@ -126,7 +127,7 @@ export default async function ApprovalDetailPage({ params }: { params: Promise<{
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">{approval.approvalType}</span>
                 </div>
               )}
-              <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{approval.writtenApproval}</p>
+              <p className="text-sm text-slate-800 leading-relaxed"><RichText text={approval.writtenApproval} /></p>
               {approval.reviewer && (
                 <div className="mt-3 text-xs text-slate-500">
                   بواسطة: <span className="font-medium text-slate-700">{approval.reviewer.fullName}</span>
@@ -147,7 +148,7 @@ export default async function ApprovalDetailPage({ params }: { params: Promise<{
                 {approval.finalNotes && (
                   <div className="sm:col-span-2">
                     <dt className="text-xs text-slate-500">ملاحظات نهائية</dt>
-                    <dd className="mt-1 text-slate-800 whitespace-pre-wrap">{approval.finalNotes}</dd>
+                    <dd className="mt-1 text-slate-800 "><RichText text={approval.finalNotes} /></dd>
                   </div>
                 )}
               </dl>

@@ -10,6 +10,8 @@ import { TicketActions } from "./actions-panel";
 import { CommentBox } from "./comment-box";
 import { UploadBox } from "./upload-box";
 import { describeEvent } from "@/lib/event-text";
+import { RichText } from "@/components/ui/rich-text";
+import { CopyButton } from "@/components/ui/copy-button";
 
 export const dynamic = "force-dynamic";
 
@@ -73,15 +75,24 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           )}
         </div>
 
-        <div className="card p-6">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="font-mono text-sm text-slate-500">{ticket.ticketNumber}</div>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">{ticket.beneficiaryName}</h1>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {ticket.teams.map((t) => (
-                  <TeamChip key={t.teamId} name={t.team.name} color={t.team.color} observer={t.access === "observer"} />
-                ))}
+        <div className="card overflow-hidden">
+          <div className={`h-1.5 ${TYPE_BAND[ticket.type]}`} />
+          <div className="p-6">
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-4">
+              <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-bold text-white shadow-sm ${TYPE_AVATAR[ticket.type]}`}>
+                {ticket.beneficiaryName.trim().charAt(0)}
+              </span>
+              <div>
+                <div className="flex items-center gap-1 font-mono text-sm text-slate-500">
+                  {ticket.ticketNumber}<CopyButton text={ticket.ticketNumber} label="رقم التذكرة" />
+                </div>
+                <h1 className="text-2xl font-bold text-slate-900">{ticket.beneficiaryName}</h1>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {ticket.teams.map((t) => (
+                    <TeamChip key={t.teamId} name={t.team.name} color={t.team.color} observer={t.access === "observer"} />
+                  ))}
+                </div>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -91,7 +102,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
             </div>
           </div>
 
-          <div className="mb-4 grid grid-cols-2 gap-3 border-y border-slate-100 py-3 text-sm md:grid-cols-4">
+          <div className="mb-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
             <Info label="مهلة الإنجاز">
               {ticket.status === "pending" ? <SlaCountdown deadline={ticket.slaDeadline.toISOString()} /> : formatDateTime(ticket.slaDeadline)}
             </Info>
@@ -101,8 +112,8 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
-            <Info label="الهاتف الأول" mono>{ticket.phone1}</Info>
-            <Info label="الهاتف الثاني" mono>{ticket.phone2 ?? "—"}</Info>
+            <Info label="الهاتف الأول" mono><Phone n={ticket.phone1} /></Info>
+            <Info label="الهاتف الثاني" mono>{ticket.phone2 ? <Phone n={ticket.phone2} /> : "—"}</Info>
             <Info label="كود الحالة" mono>{ticket.caseCode ?? "—"}</Info>
             <Info label="صلة القرابة">{ticket.relationship}</Info>
             <Info label="الجنسية">{ticket.nationality}</Info>
@@ -123,7 +134,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           {ticket.description && (
             <div className="mt-4">
               <div className="mb-1 text-xs font-medium text-slate-500">تفاصيل الحالة</div>
-              <p className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-800">{ticket.description}</p>
+              <p className="rounded-lg bg-slate-50 p-3 text-sm leading-relaxed text-slate-800"><RichText text={ticket.description} /></p>
             </div>
           )}
 
@@ -132,18 +143,20 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               <span className="font-semibold">أُغلقت</span>
               {ticket.closedAt && <> في {formatDateTime(ticket.closedAt)}</>}
               {ticket.closedBy && <> بواسطة {displayName(ticket.closedBy.fullName)}</>}
-              {ticket.closeReason && <p className="mt-1 whitespace-pre-wrap text-slate-700">{ticket.closeReason}</p>}
+              {ticket.closeReason && <p className="mt-1 text-slate-700"><RichText text={ticket.closeReason} /></p>}
             </div>
           )}
+          </div>
         </div>
 
         <div className="card p-6">
-          <h2 className="mb-3 font-semibold text-slate-900">المرفقات ({ticket.attachments.length})</h2>
+          <SectionTitle icon="📎" title="المرفقات" count={ticket.attachments.length} />
           <ul className="space-y-1.5">
             {ticket.attachments.map((a) => (
-              <li key={a.id} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 text-sm">
-                <a href={`/api/attachments/${a.id}`} target="_blank" rel="noopener" className="truncate text-brand-700 hover:underline">
-                  📎 {a.fileName}
+              <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 px-3 py-2.5 text-sm transition hover:border-brand-200 hover:bg-brand-50/40">
+                <a href={`/api/attachments/${a.id}`} target="_blank" rel="noopener" className="flex min-w-0 items-center gap-2 font-medium text-brand-700 hover:underline">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xs font-bold uppercase text-brand-700">{a.fileName.split(".").pop()?.slice(0, 4)}</span>
+                  <span className="truncate">{a.fileName}</span>
                 </a>
                 <span className="shrink-0 text-xs text-slate-400">
                   {formatBytes(a.size)} · {displayName(a.uploadedBy.fullName)} · {formatDateTime(a.createdAt)}
@@ -156,7 +169,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
         </div>
 
         <div className="card p-6">
-          <h2 className="mb-4 font-semibold text-slate-900">السجل والتحديثات</h2>
+          <SectionTitle icon="🕘" title="السجل والتحديثات" count={timeline.length} />
           <ol className="stagger relative space-y-4 before:absolute before:bottom-2 before:right-[15px] before:top-2 before:w-px before:bg-slate-200">
             {timeline.map((it) =>
               it.kind === "comment" ? (
@@ -174,7 +187,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                       </span>
                       <span className="text-slate-400">{formatDateTime(it.c.createdAt)}</span>
                     </div>
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{highlightMentions(it.c.body)}</p>
+                    <p className="text-sm leading-relaxed text-slate-800"><RichText text={it.c.body} /></p>
                   </div>
                 </li>
               ) : (
@@ -183,7 +196,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                     <span className={`h-3 w-3 rounded-full ring-4 ring-white ${EVENT_DOT[it.e.action] ?? "bg-slate-300"}`} />
                   </span>
                   <div className="min-w-0 pt-1 text-xs">
-                    <div className="text-sm text-slate-700">{describeEvent(it.e.action, it.e.metadata)}</div>
+                    <div className="text-sm text-slate-700"><RichText text={describeEvent(it.e.action, it.e.metadata)} /></div>
                     <div className="mt-0.5 text-slate-400">{it.e.actor ? displayName(it.e.actor.fullName) : "النظام"} • {formatDateTime(it.e.createdAt)}</div>
                   </div>
                 </li>
@@ -198,7 +211,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      <div className="no-print space-y-4">
+      <div className="no-print space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:pb-4">
         <TicketActions
           ticketId={ticket.id}
           perms={perms}
@@ -217,20 +230,45 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   );
 }
 
-function Info({ label, children, mono }: { label: string; children: React.ReactNode; mono?: boolean }) {
+const TYPE_BAND: Record<string, string> = {
+  emergency: "bg-gradient-to-l from-red-500 to-rose-400",
+  new_case: "bg-gradient-to-l from-violet-500 to-fuchsia-400",
+  follow_up: "bg-gradient-to-l from-brand-600 to-brand-400",
+};
+const TYPE_AVATAR: Record<string, string> = {
+  emergency: "bg-gradient-to-br from-red-500 to-rose-600",
+  new_case: "bg-gradient-to-br from-violet-500 to-violet-700",
+  follow_up: "bg-gradient-to-br from-brand-500 to-brand-700",
+};
+
+function SectionTitle({ icon, title, count }: { icon: string; title: string; count?: number }) {
   return (
-    <div>
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className={`mt-0.5 text-slate-800 ${mono ? "font-mono text-sm" : ""}`} dir={mono ? "ltr" : undefined} style={mono ? { textAlign: "right" } : undefined}>
-        {children}
-      </div>
-    </div>
+    <h2 className="mb-4 flex items-center gap-2 font-semibold text-slate-900">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-base">{icon}</span>
+      {title}
+      {count !== undefined && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">{count}</span>}
+    </h2>
   );
 }
 
-function highlightMentions(body: string) {
-  return body.split(/(@[a-zA-Z0-9._-]{2,})/g).map((part, i) =>
-    part.startsWith("@") ? <bdi key={i} dir="ltr" className="font-semibold text-brand-700">{part}</bdi> : part,
+// رقم التليفون بيتضغط عليه يتصل على طول (من الموبايل)
+function Phone({ n }: { n: string }) {
+  return (
+    <a href={`tel:${n}`} className="inline-flex items-center gap-1 text-slate-800 hover:text-brand-700">
+      {n}
+      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+    </a>
+  );
+}
+
+function Info({ label, children, mono }: { label: string; children: React.ReactNode; mono?: boolean }) {
+  return (
+    <div className="rounded-xl bg-slate-50/80 px-3 py-2.5 ring-1 ring-slate-100">
+      <div className="text-[11px] font-medium text-slate-500">{label}</div>
+      <div className={`mt-0.5 font-medium text-slate-800 ${mono ? "font-mono text-sm" : ""}`} dir={mono ? "ltr" : undefined} style={mono ? { textAlign: "right" } : undefined}>
+        {children}
+      </div>
+    </div>
   );
 }
 

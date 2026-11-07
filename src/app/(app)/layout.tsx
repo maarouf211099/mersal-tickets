@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Nav } from "@/components/layout/nav";
+import { Toaster } from "@/components/ui/toast";
 import { ForcePasswordChange } from "@/components/account/force-password";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-slate-50">
       <Nav user={{ name: user.name, role: user.role, teams: teams.map((t) => t.name) }} initialUnread={unread} />
       <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">{children}</main>
+      <Toaster />
     </div>
   );
 }

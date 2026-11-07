@@ -108,9 +108,9 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
             {tickets.map((t) => {
               const sla = slaState(t, now);
               return (
-              <tr key={t.id} className={t.status === "pending" && sla === "breached" ? "bg-red-50/50" : undefined}>
+              <tr key={t.id} className={`group relative cursor-pointer ${t.status === "pending" && sla === "breached" ? "bg-red-50/50" : ""}`}>
                 <td className={`border-r-4 ${TYPE_STRIPE[t.type]}`}>
-                  <Link href={`/tickets/${t.id}`} className="font-medium text-brand-700 hover:underline">{t.beneficiaryName}</Link>
+                  <Link href={`/tickets/${t.id}`} className="font-medium text-brand-700 after:absolute after:inset-0 group-hover:underline">{t.beneficiaryName}</Link>
                   <div className="font-mono text-xs text-slate-400">
                     {t.ticketNumber}{t._count.attachments > 0 && ` · 📎${t._count.attachments}`}{t._count.comments > 0 && ` · 💬${t._count.comments}`}
                   </div>

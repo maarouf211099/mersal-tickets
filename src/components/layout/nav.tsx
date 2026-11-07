@@ -15,6 +15,14 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
   const [toast, setToast] = useState<{ title: string; body?: string; ticketId?: string } | null>(null);
   const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const ctx = () => new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -97,7 +105,8 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
 
   return (
     <>
-      <nav className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md shadow-sm">
+      <nav className={cn("sticky top-0 z-40 border-b backdrop-blur-md transition-all duration-300",
+        scrolled ? "border-slate-200 bg-white/85 shadow-md shadow-slate-900/5" : "border-slate-200/80 bg-white/95 shadow-sm")}>
         <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 sm:px-6 h-16">
           {/* Logo */}
           <Link href="/dashboard" className="shrink-0 group">
