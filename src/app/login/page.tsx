@@ -9,7 +9,14 @@ const FEATURES = [
   { icon: ShieldIcon, title: "كل تعديل مسجَّل", text: "سجل كامل يوضح من عدّل ماذا ومتى" },
 ];
 
-export default function LoginPage() {
+const SSO_ERRORS: Record<string, string> = {
+  invalid: "رابط الدخول من البوابة انتهى أو مش صالح — افتح النظام من البوابة تاني، أو ادخل بحسابك هنا",
+  nouser: "حسابك في البوابة مش مربوط بحساب في نظام التذاكر — كلّم مدير البوابة، أو ادخل بحسابك هنا",
+};
+
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ sso?: string }> }) {
+  const { sso } = await searchParams;
+  const ssoError = sso ? SSO_ERRORS[sso] : undefined;
   return (
     <div className="flex min-h-screen bg-slate-50">
       <aside className="animate-gradient relative hidden w-[46%] overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 p-12 text-white lg:flex lg:flex-col lg:justify-between">
@@ -56,6 +63,9 @@ export default function LoginPage() {
           <div className="animate-fade-in-up rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-brand-900/5">
             <h2 className="mb-1 text-2xl font-bold text-slate-900">تسجيل الدخول</h2>
             <p className="mb-6 text-sm text-slate-500">مرحبًا بعودتك، أدخل بياناتك للمتابعة</p>
+            {ssoError && (
+              <div role="alert" className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">{ssoError}</div>
+            )}
             <Suspense fallback={<div className="py-8 text-center text-sm text-slate-400">جاري التحميل...</div>}>
               <LoginForm />
             </Suspense>
