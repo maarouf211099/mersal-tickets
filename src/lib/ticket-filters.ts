@@ -7,7 +7,17 @@ import { normalizeDigits } from "./workflow";
 export type TicketFilters = {
   status?: string; type?: string; source?: string; teamId?: string;
   q?: string; sla?: string; mine?: string; page?: string;
+  period?: string; sort?: string; dir?: string;
 };
+
+// فترة الإنشاء: اليوم / آخر 7 أيام / آخر 30 يوم (بتوقيت القاهرة)
+function periodStart(period: string | undefined): Date | null {
+  if (period !== "today" && period !== "7d" && period !== "30d") return null;
+  const cairoToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(new Date());
+  const start = new Date(`${cairoToday}T00:00:00+02:00`);
+  const days = period === "today" ? 0 : period === "7d" ? 6 : 29;
+  return new Date(start.getTime() - days * 86_400_000);
+}
 
 // نفس الفلاتر للقائمة وللتصدير — والـ scope دايماً بيتطبق
 export function buildTicketWhere(user: SessionUser, f: TicketFilters): Prisma.TicketWhereInput {
@@ -21,6 +31,8 @@ export function buildTicketWhere(user: SessionUser, f: TicketFilters): Prisma.Ti
   if (f.teamId === "mine") and.push(myWorkScope(user));
   else if (f.teamId) and.push({ teams: { some: { teamId: f.teamId, access: "holder" } } });
   if (f.mine === "1") and.push({ assignedToId: user.id });
+  const from = periodStart(f.period);
+  if (from) and.push({ createdAt: { gte: from } });
   if (f.sla === "breached") and.push({ status: "pending", slaDeadline: { lt: new Date() } });
   const q = normalizeDigits(f.q?.trim() ?? "");
   if (q) {

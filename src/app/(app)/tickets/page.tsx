@@ -20,13 +20,17 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
   const { user } = s;
 
   const where = buildTicketWhere(user, f);
+  const sortKey = f.sort && f.sort in SORT_FIELDS ? (f.sort as SortKey) : null;
+  const sortDir: "asc" | "desc" = f.dir === "asc" ? "asc" : "desc";
   const page = Math.max(1, Number(f.page) || 1);
   const [total, tickets, teams] = await Promise.all([
     prisma.ticket.count({ where }),
     prisma.ticket.findMany({
       where,
-      // الكل: المفتوحة الأول (الأقرب لانتهاء المهلة)، وبعدها المغلقة الأحدث فالأقدم
-      orderBy: f.status === "pending" ? [{ slaDeadline: "asc" }]
+      orderBy: sortKey
+        ? [{ [SORT_FIELDS[sortKey]]: sortDir }, { createdAt: "desc" }]
+        // الافتراضي — الكل: المفتوحة الأول (الأقرب لانتهاء المهلة)، وبعدها المغلقة الأحدث فالأقدم
+        : f.status === "pending" ? [{ slaDeadline: "asc" }]
         : f.status === "closed" ? [{ closedAt: "desc" }]
         : [{ status: "asc" }, { closedAt: { sort: "desc", nulls: "first" } }, { slaDeadline: "asc" }],
       skip: (page - 1) * PAGE_SIZE,
@@ -50,6 +54,27 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
   };
   const canExport = isManager(user) || user.canExport;
 
+  // عنوان عمود قابل للترتيب: أول ضغطة بالترتيب الافتراضي للعمود، والضغطة التانية بتعكسه
+  function SortTh({ k, label }: { k: SortKey; label: string }) {
+    const active = sortKey === k;
+    const next = active ? (sortDir === "asc" ? "desc" : "asc") : DEFAULT_DIR[k];
+    const title = k === "created" || k === "deadline"
+      ? (next === "desc" ? "من الأحدث للأقدم" : "من الأقدم للأحدث")
+      : (next === "asc" ? "تصاعدي" : "تنازلي");
+    return (
+      <th aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+        <Link href={`/tickets?${qs({ sort: k, dir: next, page: "" })}`} title={`ترتيب: ${title}`}
+          className={`group/sort inline-flex items-center gap-1 rounded-md px-1 py-0.5 -mx-1 transition-colors hover:bg-slate-200/60 hover:text-slate-900 ${active ? "text-brand-700" : ""}`}>
+          {label}
+          <span className={`flex flex-col leading-none ${active ? "" : "opacity-30 group-hover/sort:opacity-70"}`} aria-hidden>
+            <svg viewBox="0 0 10 6" className={`h-1.5 w-2.5 ${active && sortDir === "asc" ? "text-brand-600" : active ? "text-slate-300" : ""}`} fill="currentColor"><path d="M5 0l5 6H0z" /></svg>
+            <svg viewBox="0 0 10 6" className={`mt-0.5 h-1.5 w-2.5 ${active && sortDir === "desc" ? "text-brand-600" : active ? "text-slate-300" : ""}`} fill="currentColor"><path d="M5 6L0 0h10z" /></svg>
+          </span>
+        </Link>
+      </th>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -71,7 +96,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
         </div>
       </div>
 
-      <form className="card grid grid-cols-2 gap-3 p-4 md:grid-cols-7" method="get">
+      <form className="card grid grid-cols-2 gap-3 p-4 md:grid-cols-4 xl:grid-cols-8" method="get">
         <Input name="q" defaultValue={f.q ?? ""} placeholder="بحث: الاسم، الهاتف، الكود، الرقم القومي..." className="col-span-2" />
         <Select name="status" defaultValue={f.status ?? "all"}>
           <option value="pending">قيد التنفيذ</option>
@@ -91,18 +116,35 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
           {!isManager(user) && <option value="mine">تذاكر فرقي</option>}
           {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </Select>
+        <Select name="period" defaultValue={f.period ?? ""}>
+          <option value="">كل الأوقات</option>
+          <option value="today">اليوم</option>
+          <option value="7d">آخر 7 أيام</option>
+          <option value="30d">آخر 30 يوم</option>
+        </Select>
         <div className="flex gap-2">
           <button className="flex-1 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">تصفية</button>
           <Link href="/tickets" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">مسح</Link>
         </div>
         {f.sla === "breached" && <input type="hidden" name="sla" value="breached" />}
         {f.mine === "1" && <input type="hidden" name="mine" value="1" />}
+        {sortKey && <input type="hidden" name="sort" value={sortKey} />}
+        {sortKey && <input type="hidden" name="dir" value={sortDir} />}
       </form>
 
       <div className="card overflow-x-auto">
         <table className="data-table rows-in min-w-[900px]">
           <thead>
-            <tr><th>التذكرة</th><th>النوع</th><th>المصدر</th><th>لدى فريق</th><th>المسؤول</th><th>الحالة</th><th>المهلة</th><th>تاريخ الإنشاء</th></tr>
+            <tr>
+              <SortTh k="name" label="التذكرة" />
+              <SortTh k="type" label="النوع" />
+              <SortTh k="source" label="المصدر" />
+              <th>لدى فريق</th>
+              <th>المسؤول</th>
+              <SortTh k="status" label="الحالة" />
+              <SortTh k="deadline" label="المهلة" />
+              <SortTh k="created" label="تاريخ الإنشاء" />
+            </tr>
           </thead>
           <tbody>
             {tickets.map((t) => {
@@ -166,4 +208,14 @@ const TYPE_STRIPE: Record<TicketType, string> = {
   emergency: "border-r-red-500",
   new_case: "border-r-violet-400",
   follow_up: "border-r-brand-400",
+};
+
+const SORT_FIELDS = {
+  name: "beneficiaryName", type: "type", source: "source",
+  status: "status", deadline: "slaDeadline", created: "createdAt",
+} as const;
+type SortKey = keyof typeof SORT_FIELDS;
+// التاريخ: الأحدث الأول — الباقي: أبجدي/تصاعدي
+const DEFAULT_DIR: Record<SortKey, "asc" | "desc"> = {
+  name: "asc", type: "asc", source: "asc", status: "asc", deadline: "asc", created: "desc",
 };
