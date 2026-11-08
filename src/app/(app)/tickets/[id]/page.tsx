@@ -12,6 +12,7 @@ import { UploadBox } from "./upload-box";
 import { describeEvent } from "@/lib/event-text";
 import { RichText } from "@/components/ui/rich-text";
 import { CopyButton } from "@/components/ui/copy-button";
+import { Avatar } from "@/components/ui/avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -174,9 +175,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
             {timeline.map((it) =>
               it.kind === "comment" ? (
                 <li key={it.c.id} className="relative flex gap-3">
-                  <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-4 ring-white ${it.c.kind === "note" ? "bg-amber-100 text-amber-800" : "bg-brand-100 text-brand-700"}`}>
-                    {it.c.author.fullName.trim().charAt(0)}
-                  </span>
+                  <Avatar name={it.c.author.fullName} className="relative z-10 ring-4" />
                   <div className={`min-w-0 flex-1 rounded-xl border p-3 ${it.c.kind === "note" ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white shadow-sm"}`}>
                     <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs">
                       <span className="font-semibold text-slate-800">
