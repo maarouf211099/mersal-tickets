@@ -44,7 +44,8 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
     | { kind: "event"; at: Date; e: (typeof ticket.events)[number] };
   const timeline: Item[] = [
     ...ticket.comments.map((c) => ({ kind: "comment" as const, at: c.createdAt, c })),
-    ...ticket.events.map((e) => ({ kind: "event" as const, at: e.createdAt, e })),
+    // تعديل وحذف التحديثات مش بيظهروا في سجل التذكرة — بيتسجلوا في السجل العام للمدير بس
+    ...ticket.events.filter((e) => !HIDDEN_EVENTS.has(e.action)).map((e) => ({ kind: "event" as const, at: e.createdAt, e })),
   ].sort((a, b) => a.at.getTime() - b.at.getTime());
 
   const since = holders.reduce<Date | null>((a, h) => (!a || h.addedAt > a ? h.addedAt : a), null);
@@ -187,7 +188,6 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                       </span>
                       <span className="text-slate-400">
                         {formatDateTime(it.c.createdAt)}
-                        {it.c.editedAt && <span className="mr-1 italic" title={`آخر تعديل: ${formatDateTime(it.c.editedAt)}`}>(مُعدَّل)</span>}
                       </span>
                     </div>
                     <CommentBody id={it.c.id} body={it.c.body} mine={it.c.authorId === user.id && user.role !== "viewer"}>
@@ -277,9 +277,9 @@ function Info({ label, children, mono }: { label: string; children: React.ReactN
   );
 }
 
+const HIDDEN_EVENTS = new Set(["comment_edited", "comment_deleted"]);
+
 const EVENT_DOT: Record<string, string> = {
-  comment_edited: "bg-amber-400",
-  comment_deleted: "bg-rose-400",
   created: "bg-brand-500",
   transferred: "bg-sky-500",
   triaged: "bg-pink-500",

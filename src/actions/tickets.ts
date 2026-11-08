@@ -200,7 +200,7 @@ async function resolveMentions(text: string, ticket: Parameters<typeof ticketPer
   return { usernames, mentioned };
 }
 
-// تعديل / حذف التحديث أو الملاحظة — لصاحبها بس، والنص القديم بيتسجل في سجل التذكرة
+// تعديل / حذف التحديث أو الملاحظة — لصاحبها بس، والنص القديم بيتسجل في السجل العام (مش ظاهر في صفحة التذكرة)
 async function loadOwnComment(user: SessionUser, commentId: string) {
   const c = await prisma.ticketComment.findUnique({ where: { id: commentId } });
   if (!c) throw new Error("التحديث غير موجود");

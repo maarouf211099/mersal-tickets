@@ -43,7 +43,7 @@ export function CommentBody({ id, body, mine, children }: {
             className="rounded-md px-2 py-0.5 text-xs text-slate-500 transition hover:bg-slate-100 hover:text-brand-700">✏️ تعديل</button>
           <button type="button" disabled={pending}
             onClick={() => {
-              if (!confirm("هل تريد حذف هذا التحديث؟ سيُسجَّل الحذف ونصه في سجل التذكرة.")) return;
+              if (!confirm("هل تريد حذف هذا التحديث؟")) return;
               start(async () => {
                 const r = await deleteComment(id);
                 if (!r.ok) { toast(r.error, "error"); return; }
