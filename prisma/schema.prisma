@@ -203,6 +203,8 @@ model TicketComment {
   // اليوزرز اللي اتعملهم منشن
   mentions  String[]    @default([])
   createdAt DateTime    @default(now())
+  // آخر تعديل من صاحبه — النص القديم محفوظ في TicketEvent (comment_edited)
+  editedAt  DateTime?
 
   @@index([ticketId])
 }

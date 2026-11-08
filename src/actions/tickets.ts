@@ -178,6 +178,81 @@ export async function createTicket(form: FormData): Promise<{ ok: true; id: stri
 }
 
 // ─── تعليقات / تحديثات + منشن ────────────────────────────
+// المنشن بيوصل بس للي يقدر يشوف التيكت
+async function resolveMentions(text: string, ticket: Parameters<typeof ticketPermissions>[1]) {
+  const usernames = parseMentions(text);
+  const candidates = usernames.length
+    ? await prisma.user.findMany({
+        where: { username: { in: usernames }, isActive: true },
+        include: { teams: { include: { team: { select: { code: true, isActive: true } } } } },
+      })
+    : [];
+  const mentioned = candidates.filter((c) => {
+    const teams = c.teams.filter((m) => m.team.isActive);
+    const asSession: SessionUser = {
+      id: c.id, username: c.username, name: c.fullName, role: c.role,
+      canReopen: c.canReopen, canExport: c.canExport, mustChangePassword: c.mustChangePassword,
+      teamIds: teams.map((m) => m.teamId),
+      teamCodes: teams.map((m) => m.team.code).filter((x): x is string => !!x),
+    };
+    return ticketPermissions(asSession, ticket).canView;
+  });
+  return { usernames, mentioned };
+}
+
+// تعديل / حذف التحديث أو الملاحظة — لصاحبها بس، والنص القديم بيتسجل في سجل التذكرة
+async function loadOwnComment(user: SessionUser, commentId: string) {
+  const c = await prisma.ticketComment.findUnique({ where: { id: commentId } });
+  if (!c) throw new Error("التحديث غير موجود");
+  if (c.authorId !== user.id) throw new Error("يمكن لصاحب التحديث فقط تعديله أو حذفه");
+  if (user.role === "viewer") throw new Error("غير مصرح");
+  return c;
+}
+
+export async function editComment(commentId: string, body: string): Promise<Result> {
+  return guard(async () => {
+    const user = await requireUser();
+    const c = await loadOwnComment(user, commentId);
+    const clean = body.trim();
+    if (!clean) return { ok: false, error: "يُرجى كتابة نص أولًا" };
+    if (clean.length > 5000) return { ok: false, error: "النص طويل جداً" };
+    if (clean === c.body) return { ok: true };
+    const { ticket } = await loadWithPerms(user, c.ticketId);
+    const { mentioned } = await resolveMentions(clean, ticket);
+    await prisma.$transaction([
+      prisma.ticketComment.update({
+        where: { id: c.id },
+        data: { body: clean, editedAt: new Date(), mentions: mentioned.map((m) => m.username) },
+      }),
+      prisma.ticketEvent.create({
+        data: { ticketId: c.ticketId, actorId: user.id, action: "comment_edited", metadata: { kind: c.kind, from: c.body, to: clean } },
+      }),
+    ]);
+    // إشعار للي اتعملهم منشن جديد بس
+    const fresh = mentioned.filter((m) => !c.mentions.includes(m.username) && m.id !== user.id);
+    await notify({
+      userIds: fresh.map((m) => m.id), ticketId: c.ticketId, type: "mention",
+      title: `أشار إليك ${user.name} في ${ticket.ticketNumber}`, body: clean.slice(0, 140),
+    });
+    refresh(c.ticketId);
+    return { ok: true };
+  });
+}
+
+export async function deleteComment(commentId: string): Promise<Result> {
+  return guard(async () => {
+    const user = await requireUser();
+    const c = await loadOwnComment(user, commentId);
+    await prisma.$transaction([
+      prisma.ticketComment.delete({ where: { id: c.id } }),
+      prisma.ticketEvent.create({
+        data: { ticketId: c.ticketId, actorId: user.id, action: "comment_deleted", metadata: { kind: c.kind, body: c.body } },
+      }),
+    ]);
+    refresh(c.ticketId);
+    return { ok: true };
+  });
+}
 export async function addComment(ticketId: string, kind: "update" | "note", body: string): Promise<Result> {
   return guard(async () => {
     const user = await requireUser();
@@ -187,24 +262,7 @@ export async function addComment(ticketId: string, kind: "update" | "note", body
     if (!clean) return { ok: false, error: "يُرجى كتابة نص أولًا" };
     if (clean.length > 5000) return { ok: false, error: "النص طويل جداً" };
 
-    // المنشن بيوصل بس للي يقدر يشوف التيكت
-    const usernames = parseMentions(clean);
-    const candidates = usernames.length
-      ? await prisma.user.findMany({
-          where: { username: { in: usernames }, isActive: true },
-          include: { teams: { include: { team: { select: { code: true, isActive: true } } } } },
-        })
-      : [];
-    const mentioned = candidates.filter((c) => {
-      const teams = c.teams.filter((m) => m.team.isActive);
-      const asSession: SessionUser = {
-        id: c.id, username: c.username, name: c.fullName, role: c.role,
-        canReopen: c.canReopen, canExport: c.canExport, mustChangePassword: c.mustChangePassword,
-        teamIds: teams.map((m) => m.teamId),
-        teamCodes: teams.map((m) => m.team.code).filter((x): x is string => !!x),
-      };
-      return ticketPermissions(asSession, ticket).canView;
-    });
+    const { usernames, mentioned } = await resolveMentions(clean, ticket);
 
     await prisma.ticketComment.create({
       data: { ticketId, authorId: user.id, kind, body: clean, mentions: mentioned.map((m) => m.username) },

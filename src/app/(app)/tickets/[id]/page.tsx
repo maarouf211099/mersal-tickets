@@ -9,6 +9,7 @@ import { displayName, formatBytes, formatDateTime, formatSince } from "@/lib/uti
 import { TicketActions } from "./actions-panel";
 import { CommentBox } from "./comment-box";
 import { UploadBox } from "./upload-box";
+import { CommentBody } from "./comment-item";
 import { describeEvent } from "@/lib/event-text";
 import { RichText } from "@/components/ui/rich-text";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -184,9 +185,14 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                           {it.c.kind === "note" ? "📝 ملاحظة" : "🔄 تحديث"}
                         </span>
                       </span>
-                      <span className="text-slate-400">{formatDateTime(it.c.createdAt)}</span>
+                      <span className="text-slate-400">
+                        {formatDateTime(it.c.createdAt)}
+                        {it.c.editedAt && <span className="mr-1 italic" title={`آخر تعديل: ${formatDateTime(it.c.editedAt)}`}>(مُعدَّل)</span>}
+                      </span>
                     </div>
-                    <p className="text-sm leading-relaxed text-slate-800"><RichText text={it.c.body} /></p>
+                    <CommentBody id={it.c.id} body={it.c.body} mine={it.c.authorId === user.id && user.role !== "viewer"}>
+                      <p className="text-sm leading-relaxed text-slate-800"><RichText text={it.c.body} /></p>
+                    </CommentBody>
                   </div>
                 </li>
               ) : (
@@ -272,6 +278,8 @@ function Info({ label, children, mono }: { label: string; children: React.ReactN
 }
 
 const EVENT_DOT: Record<string, string> = {
+  comment_edited: "bg-amber-400",
+  comment_deleted: "bg-rose-400",
   created: "bg-brand-500",
   transferred: "bg-sky-500",
   triaged: "bg-pink-500",

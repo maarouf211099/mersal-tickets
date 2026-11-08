@@ -3,6 +3,7 @@
 type Meta = Record<string, unknown>;
 const list = (v: unknown) => (Array.isArray(v) ? v.join(" + ") : String(v ?? ""));
 const withNote = (s: string, note: unknown) => (note ? `${s} — "${note}"` : s);
+const clip = (v: unknown, n = 300) => { const t = String(v ?? ""); return t.length > n ? t.slice(0, n) + "…" : t; };
 
 export function describeEvent(action: string, metadata: unknown): string {
   const m = (metadata ?? {}) as Meta;
@@ -18,6 +19,10 @@ export function describeEvent(action: string, metadata: unknown): string {
     case "assigned": return m.to ? `أُسندت إلى ${m.to}` : "أُلغي الإسناد";
     case "attachment_added": return `أُضيف مرفق: ${list(m.files)}`;
     case "sla_breached": return "⛔ تجاوزت التذكرة مهلة الإنجاز";
+    case "comment_edited":
+      return `✏️ عدّل ${m.kind === "note" ? "ملاحظة" : "تحديثًا"}: "${clip(m.from)}" ← "${clip(m.to)}"`;
+    case "comment_deleted":
+      return `🗑️ حذف ${m.kind === "note" ? "ملاحظة" : "تحديثًا"}: "${clip(m.body)}"`;
     case "details_updated": {
       const changes = (m.changes as { label: string; from: string | null; to: string | null }[]) ?? [];
       return "تعديل البيانات: " + changes.map((c) => `${c.label} (${c.from ?? "—"} ← ${c.to ?? "—"})`).join("، ");
