@@ -41,6 +41,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
       include: {
         teams: { include: { team: true } },
         assignedTo: { select: { fullName: true } },
+        createdBy: { select: { fullName: true } },
         _count: { select: { attachments: true, comments: true } },
       },
     }),
@@ -173,7 +174,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
               <th>المسؤول</th>
               <SortTh k="status" label="الحالة" />
               <SortTh k="deadline" label="المهلة" />
-              <SortTh k="created" label="تاريخ الإنشاء" />
+              <SortTh k="created" label="أنشأها / التاريخ" />
             </tr>
           </thead>
           <tbody>
@@ -216,7 +217,13 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
                     )}
                   </div>
                 </td>
-                <td className="text-xs text-slate-500">{formatDateTime(t.createdAt)}</td>
+                <td className="whitespace-nowrap text-xs">
+                  <span className="inline-flex items-center gap-1.5 font-medium text-slate-700">
+                    <Avatar name={t.createdBy.fullName} size="xs" />
+                    {displayName(t.createdBy.fullName)}
+                  </span>
+                  <div className="mt-0.5 text-slate-400">{formatDateTime(t.createdAt)}</div>
+                </td>
               </tr>
               );
             })}
