@@ -12,7 +12,8 @@ import { notify, teamMemberIds } from "@/lib/notify";
 import { pickFiles, removeStoredFile, saveFile, validateFiles } from "@/lib/storage";
 import {
   EGYPTIAN, TEAM, TRIAGE_LABELS, identityError, normalizeDigits, parseMentions,
-  OUTBOUND_EMERGENCY_SLA_MINUTES, researchOutcome, slaDeadlineAfterTransfer, slaDeadlineFor, transferTargets, triageHolders,
+  CLOSE_CATEGORIES, GENDERS, OUTBOUND_EMERGENCY_SLA_MINUTES, researchOutcome, slaDeadlineAfterReceive, slaDeadlineAfterTransfer,
+  slaDeadlineFor, transferTargets, triageHolders,
 } from "@/lib/workflow";
 
 type Result = { ok: true; warning?: string } | { ok: false; error: string };
@@ -81,6 +82,9 @@ const detailsSchema = z.object({
   nationalId: z.string().trim(),
   unhcrNumber: z.string().trim().max(50),
   description: z.string().trim().max(5000),
+  age: z.string().trim().regex(/^(\d{1,3})?$/, "السن يجب أن يكون رقمًا").refine((v) => !v || Number(v) <= 120, "السن غير صحيح"),
+  gender: z.enum(["", ...GENDERS] as [string, ...string[]], { message: "النوع غير صحيح" }),
+  location: z.string().trim().max(200, "مكان الحالة طويل جدًا"),
 });
 
 function readDetails(form: FormData) {
@@ -91,7 +95,7 @@ function readDetails(form: FormData) {
     beneficiaryName: s("beneficiaryName"), phone1: s("phone1"), phone2: s("phone2"),
     caseCode: s("caseCode"), relationship: s("relationship"), nationality,
     nationalId: s("nationalId").replace(/\s/g, ""), unhcrNumber: s("unhcrNumber"),
-    description: s("description"),
+    description: s("description"), age: s("age"), gender: s("gender"), location: s("location"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" } as const;
   const d = parsed.data;
@@ -109,6 +113,9 @@ function readDetails(form: FormData) {
       nationalId: egyptian ? d.nationalId || null : null,
       unhcrNumber: egyptian ? null : d.unhcrNumber || null,
       description: d.description || null,
+      age: d.age ? Number(d.age) : null,
+      gender: d.gender || null,
+      location: d.location || null,
     },
   } as const;
 }
@@ -323,7 +330,10 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
       }),
       prisma.ticket.update({
         where: { id: ticketId },
-        data: { assignedToId: null, ...(newDeadline && { slaDeadline: newDeadline, slaBreachNotifiedAt: null }) },
+        data: {
+          assignedToId: null, receivedAt: null, receivedById: null,
+          ...(newDeadline && { slaDeadline: newDeadline, slaBreachNotifiedAt: null }),
+        },
       }),
       prisma.ticketEvent.create({
         data: {
@@ -363,7 +373,7 @@ export async function triageTicket(ticketId: string, level: "emergency" | "urgen
       for (const t of targets) await upsertHolder(tx, ticketId, t.id);
       await tx.ticket.update({
         where: { id: ticketId },
-        data: { triageLevel: level, researchDecision: "pending", assignedToId: null },
+        data: { triageLevel: level, researchDecision: "pending", assignedToId: null, receivedAt: null, receivedById: null },
       });
       await tx.ticketEvent.create({
         data: {
@@ -405,7 +415,7 @@ export async function decideResearch(ticketId: string, decision: "accepted" | "r
           where: { id: ticketId },
           data: {
             researchDecision: "rejected", researchDecidedAt: now, researchDecidedById: user.id,
-            status: "closed", closedAt: now, closedById: user.id, closeReason: text,
+            status: "closed", closedAt: now, closedById: user.id, closeReason: text, closeCategory: "استبعاد الأبحاث",
           },
         });
       } else {
@@ -413,7 +423,7 @@ export async function decideResearch(ticketId: string, decision: "accepted" | "r
         for (const t of add) await upsertHolder(tx, ticketId, t.id);
         await tx.ticket.update({
           where: { id: ticketId },
-          data: { researchDecision: "accepted", researchDecidedAt: now, researchDecidedById: user.id },
+          data: { researchDecision: "accepted", researchDecidedAt: now, researchDecidedById: user.id, receivedAt: null, receivedById: null },
         });
       }
       if (text) await tx.ticketComment.create({ data: { ticketId, authorId: user.id, kind: "note", body: text } });
@@ -442,23 +452,24 @@ export async function decideResearch(ticketId: string, decision: "accepted" | "r
 }
 
 // ─── قفل / إعادة فتح ─────────────────────────────────────
-export async function closeTicket(ticketId: string, reason: string): Promise<Result> {
+export async function closeTicket(ticketId: string, category: string, reason: string): Promise<Result> {
   return guard(async () => {
     const user = await requireUser();
     const { ticket, perms } = await loadWithPerms(user, ticketId);
     if (!perms.canClose) return { ok: false, error: "غير مصرح" };
+    if (!CLOSE_CATEGORIES.includes(category)) return { ok: false, error: "يُرجى اختيار سبب إغلاق التذكرة من القائمة" };
     const text = reason.trim();
-    if (text.length < 3) return { ok: false, error: "يُرجى كتابة سبب الإغلاق أو ملخصه" };
+    if (text.length > 2000) return { ok: false, error: "النص طويل جداً" };
     await prisma.ticket.update({
       where: { id: ticketId },
       data: {
-        status: "closed", closedAt: new Date(), closedById: user.id, closeReason: text,
-        events: { create: { actorId: user.id, action: "closed", metadata: { reason: text } } },
+        status: "closed", closedAt: new Date(), closedById: user.id, closeCategory: category, closeReason: text || null,
+        events: { create: { actorId: user.id, action: "closed", metadata: { category, reason: text || null } } },
       },
     });
     await notify({
       userIds: [ticket.createdById, ticket.assignedToId].filter((id): id is string => !!id && id !== user.id),
-      ticketId, type: "closed", title: `أُغلقت التذكرة ${ticket.ticketNumber}`, body: text,
+      ticketId, type: "closed", title: `أُغلقت التذكرة ${ticket.ticketNumber} — ${category}`, body: text || undefined,
     });
     refresh(ticketId);
     return { ok: true };
@@ -475,7 +486,7 @@ export async function reopenTicket(ticketId: string, note: string): Promise<Resu
     await prisma.ticket.update({
       where: { id: ticketId },
       data: {
-        status: "pending", closedAt: null, closedById: null, closeReason: null,
+        status: "pending", closedAt: null, closedById: null, closeReason: null, closeCategory: null,
         events: { create: { actorId: user.id, action: "reopened", metadata: { note: text } } },
       },
     });
@@ -483,6 +494,36 @@ export async function reopenTicket(ticketId: string, note: string): Promise<Resu
     await notify({
       userIds: [...(await teamMemberIds(holders, user.id)), ticket.createdById].filter((id) => id !== user.id),
       ticketId, type: "reopened", title: `🔄 إعادة فتح ${ticket.ticketNumber}`, body: text,
+    });
+    refresh(ticketId);
+    return { ok: true };
+  });
+}
+
+// ─── استلام التذكرة (الفريق اللي عنده التيكت) ─────────────
+// الطوارئ: المهلة بتبدأ من جديد من لحظة الاستلام. وبتتسند للي استلمها لو مش متسندة لحد.
+export async function receiveTicket(ticketId: string): Promise<Result> {
+  return guard(async () => {
+    const user = await requireUser();
+    const { ticket, perms } = await loadWithPerms(user, ticketId);
+    if (!perms.canReceive) return { ok: false, error: "الاستلام للفريق الذي لديه التذكرة" };
+    if (ticket.receivedAt) return { ok: false, error: "تم استلام التذكرة بالفعل" };
+    const now = new Date();
+    const holderCodes = ticket.teams.filter((t) => t.access === "holder").map((t) => t.team.code);
+    const deadline = slaDeadlineAfterReceive(ticket.type, holderCodes, now);
+    await prisma.ticket.update({
+      where: { id: ticketId },
+      data: {
+        receivedAt: now, receivedById: user.id,
+        ...(!ticket.assignedToId && { assignedToId: user.id }),
+        ...(deadline && { slaDeadline: deadline, slaBreachNotifiedAt: null }),
+        events: {
+          create: {
+            actorId: user.id, action: "received",
+            metadata: deadline ? { slaMinutes: Math.round((deadline.getTime() - now.getTime()) / 60_000) } : {},
+          },
+        },
+      },
     });
     refresh(ticketId);
     return { ok: true };
@@ -524,6 +565,7 @@ const FIELD_LABELS: Record<string, string> = {
   beneficiaryName: "الاسم", phone1: "الهاتف الأول", phone2: "الهاتف الثاني", caseCode: "الكود",
   relationship: "صلة القرابة", nationality: "الجنسية", nationalId: "الرقم القومي",
   unhcrNumber: "رقم المفوضية", description: "الوصف",
+  age: "السن", gender: "النوع", location: "مكان الحالة",
 };
 
 export async function updateTicketDetails(ticketId: string, form: FormData): Promise<Result> {
@@ -598,6 +640,7 @@ export async function getTicketForView(ticketId: string) {
       createdBy: { select: { fullName: true, username: true } },
       assignedTo: { select: { id: true, fullName: true } },
       closedBy: { select: { fullName: true } },
+      receivedBy: { select: { fullName: true } },
       researchDecidedBy: { select: { fullName: true } },
       comments: { orderBy: { createdAt: "asc" }, include: { author: { select: { fullName: true, username: true } } } },
       events: { orderBy: { createdAt: "asc" }, include: { actor: { select: { fullName: true } } } },

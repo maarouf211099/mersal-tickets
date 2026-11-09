@@ -27,6 +27,7 @@ type TicketForAccess = {
   triageLevel: string | null;
   researchDecision: string | null;
   teams: { teamId: string; access: "holder" | "observer"; team: { code: string | null } }[];
+  receivedAt?: Date | null;
 };
 
 export function ticketPermissions(u: SessionUser, t: TicketForAccess) {
@@ -49,5 +50,7 @@ export function ticketPermissions(u: SessionUser, t: TicketForAccess) {
     canTriage: canAct && holderCodes.includes(TEAM.HOTLINE_DOCTOR) && !t.triageLevel && memberOf(TEAM.HOTLINE_DOCTOR),
     canResearch: canAct && holderCodes.includes(TEAM.RESEARCH) && t.researchDecision === "pending" && memberOf(TEAM.RESEARCH),
     canDelete: manager,
+    // زرار "استلام": لأعضاء الفريق اللي عنده التيكت (والمدير)، مرة واحدة بعد كل تحويل
+    canReceive: pending && writer && !t.receivedAt && (manager || holders.some((h) => u.teamIds.includes(h.teamId))),
   };
 }

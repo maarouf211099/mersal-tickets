@@ -69,6 +69,15 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               <span className="text-sm text-slate-700">
                 المسؤول: <b>{ticket.assignedTo ? displayName(ticket.assignedTo.fullName) : "لم يُسند بعد"}</b>
               </span>
+              {ticket.receivedAt ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+                  📥 استلمها {ticket.receivedBy ? displayName(ticket.receivedBy.fullName) : "—"} {formatSince(ticket.receivedAt)}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
+                  ⏳ لم تُستلم بعد
+                </span>
+              )}
               {perms.canAct && !holders.some((h) => user.teamIds.includes(h.teamId)) && (
                 <span className="w-full text-xs text-slate-500">
                   التذكرة ليست لدى فريقك — يمكنك التعديل عليها، وكل تعديل يُسجَّل باسمك في سجل التذكرة.
@@ -118,13 +127,16 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
             <Info label="الهاتف الأول" mono><Phone n={ticket.phone1} /></Info>
             <Info label="الهاتف الثاني" mono>{ticket.phone2 ? <Phone n={ticket.phone2} /> : "—"}</Info>
             <Info label="كود الحالة" mono>{ticket.caseCode ?? "—"}</Info>
+            <Info label="السن">{ticket.age ?? "—"}</Info>
+            <Info label="النوع">{ticket.gender ?? "—"}</Info>
+            <Info label="مكان الحالة">{ticket.location ?? "—"}</Info>
             <Info label="صلة القرابة">{ticket.relationship}</Info>
             <Info label="الجنسية">{ticket.nationality}</Info>
             {ticket.nationality === EGYPTIAN
               ? <Info label="الرقم القومي" mono>{ticket.nationalId ?? "—"}</Info>
               : <Info label="رقم المفوضية" mono>{ticket.unhcrNumber ?? "—"}</Info>}
             <Info label="المصدر">{SOURCE_LABELS[ticket.source]}</Info>
-            <Info label="النوع">{TYPE_LABELS[ticket.type]}</Info>
+            <Info label="نوع التذكرة">{TYPE_LABELS[ticket.type]}</Info>
             {ticket.triageLevel && <Info label="تصنيف الطبيب">{TRIAGE_LABELS[ticket.triageLevel]}</Info>}
             {ticket.researchDecision && (
               <Info label="قرار الأبحاث">
@@ -146,6 +158,9 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               <span className="font-semibold">أُغلقت</span>
               {ticket.closedAt && <> في {formatDateTime(ticket.closedAt)}</>}
               {ticket.closedBy && <> بواسطة {displayName(ticket.closedBy.fullName)}</>}
+              {ticket.closeCategory && (
+                <div className="mt-1.5"><span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">سبب الإغلاق: {ticket.closeCategory}</span></div>
+              )}
               {ticket.closeReason && <p className="mt-1 text-slate-700"><RichText text={ticket.closeReason} /></p>}
             </div>
           )}
@@ -224,7 +239,9 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           targets={targets.map((t) => ({ id: t.id, name: t.name }))}
           assignable={assignable.map((p) => ({ id: p.id, fullName: p.fullName }))}
           assignedToId={ticket.assignedToId}
+          isEmergency={ticket.type === "emergency"}
           details={{
+            age: ticket.age, gender: ticket.gender, location: ticket.location,
             beneficiaryName: ticket.beneficiaryName, phone1: ticket.phone1, phone2: ticket.phone2,
             caseCode: ticket.caseCode, relationship: ticket.relationship, nationality: ticket.nationality,
             nationalId: ticket.nationalId, unhcrNumber: ticket.unhcrNumber, description: ticket.description,

@@ -106,6 +106,7 @@ model User {
   createdTickets    Ticket[]        @relation("CreatedTickets")
   assignedTickets   Ticket[]        @relation("AssignedTickets")
   closedTickets     Ticket[]        @relation("ClosedTickets")
+  receivedTickets   Ticket[]        @relation("ReceivedTickets")
   researchDecisions Ticket[]        @relation("ResearchDecisions")
   comments          TicketComment[]
   events            TicketEvent[]
@@ -143,6 +144,9 @@ model Ticket {
   nationalId      String? // لو مصري
   unhcrNumber     String? // لو مش مصري — رقم المفوضية
   description     String?
+  age             Int?
+  gender          String? // ذكر / أنثى
+  location        String? // مكان الحالة — نص حر
 
   createdById  String
   createdBy    User    @relation("CreatedTickets", fields: [createdById], references: [id])
@@ -158,6 +162,13 @@ model Ticket {
   closedById  String?
   closedBy    User?     @relation("ClosedTickets", fields: [closedById], references: [id], onDelete: SetNull)
   closeReason String?
+  // سبب الإغلاق من القائمة (CLOSE_CATEGORIES) — closeReason بقى تفاصيل اختيارية
+  closeCategory String?
+
+  // الاستلام: الفريق اللي عنده التيكت بيضغط "استلام" — بيتصفر مع كل تحويل
+  receivedAt   DateTime?
+  receivedById String?
+  receivedBy   User?     @relation("ReceivedTickets", fields: [receivedById], references: [id], onDelete: SetNull)
 
   // مسار الهوت لاين دكتور
   triageLevel         TriageLevel?

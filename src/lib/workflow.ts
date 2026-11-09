@@ -26,6 +26,30 @@ export function slaDeadlineAfterTransfer(type: TicketType, targetCode: string | 
   return null;
 }
 
+// استلام تيكت طوارئ: المهلة بتبدأ من جديد من لحظة الاستلام
+// (48 ساعة لو عند التسجيل والاتصال الخارجي، غير كده 30 دقيقة)
+export function slaDeadlineAfterReceive(type: TicketType, holderCodes: (string | null)[], at: Date): Date | null {
+  if (type !== "emergency") return null;
+  const minutes = holderCodes.includes(TEAM.REGISTRATION) ? OUTBOUND_EMERGENCY_SLA_MINUTES : SLA_MINUTES.emergency;
+  return new Date(at.getTime() + minutes * 60_000);
+}
+
+export const GENDERS = ["ذكر", "أنثى"];
+
+// أسباب إغلاق التذكرة (قائمة منسدلة إلزامية)
+export const CLOSE_CATEGORIES = [
+  "تعذر الوصول لمدة أكثر من 24 ساعة",
+  "عدم إرسال التقارير",
+  "وفاة",
+  "تم توفير الخدمة خارج مرسال",
+  "مديونية",
+  "مكررة",
+  "رفض الخدمة",
+  "استبعاد الأبحاث",
+  "توفير الخدمة من وزارة الصحة أو التأمين",
+  "تم استلام الحالة",
+];
+
 export function slaLabel(type: TicketType): string {
   const m = SLA_MINUTES[type];
   return m < 60 ? `${m} دقيقة` : `${m / 60} ساعة`;
@@ -93,6 +117,7 @@ export const TEAM = {
   SOCIAL_MEDIA: "SOCIAL_MEDIA",
   RECEPTION: "RECEPTION",
   CLINICS: "CLINICS",
+  MERSAL_DECISIONS: "MERSAL_DECISIONS",
 } as const;
 
 export type SeedTeam = {
@@ -114,6 +139,7 @@ export const DEFAULT_TEAMS: SeedTeam[] = [
   { code: TEAM.SOCIAL_MEDIA, name: "وسائل التواصل الاجتماعي", color: "#2563eb", description: "مصدر إدخال", isReceiver: false },
   { code: TEAM.RECEPTION, name: "الاستقبال", color: "#059669", description: "مصدر إدخال", isReceiver: false },
   { code: TEAM.CLINICS, name: "العيادات", color: "#0891b2", description: "مصدر إدخال", isReceiver: false },
+  { code: TEAM.MERSAL_DECISIONS, name: "قرارات مرسال", color: "#4f46e5", description: "قرارات مرسال", isReceiver: true },
 ];
 
 // تيم الإدخال → المصدر الافتراضي في فورم التيكت

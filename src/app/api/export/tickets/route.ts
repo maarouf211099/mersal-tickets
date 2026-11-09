@@ -32,14 +32,14 @@ export async function GET(req: Request) {
   });
 
   const header = ["رقم التذكرة", "النوع", "المصدر", "الحالة", "SLA", "الاسم", "الهاتف الأول", "الهاتف الثاني", "الكود",
-    "صلة القرابة", "الجنسية", "الرقم القومي", "رقم المفوضية", "الفريق", "المسؤول", "تصنيف الطبيب",
-    "قرار الأبحاث", "أنشأها", "تاريخ الإنشاء", "موعد SLA", "تاريخ الإغلاق", "سبب الإغلاق"];
+    "السن", "النوع", "مكان الحالة", "صلة القرابة", "الجنسية", "الرقم القومي", "رقم المفوضية", "الفريق", "المسؤول", "تصنيف الطبيب",
+    "قرار الأبحاث", "أنشأها", "تاريخ الإنشاء", "موعد SLA", "تاريخ الإغلاق", "سبب إغلاق التذكرة", "سبب الغلق", "تاريخ الاستلام"];
   const lines = rows.map((t) => [
     t.ticketNumber, TYPE_LABELS[t.type], SOURCE_LABELS[t.source], t.status === "pending" ? "قيد التنفيذ" : "مغلقة",
-    SLA_AR[slaState(t)], t.beneficiaryName, t.phone1, t.phone2, t.caseCode, t.relationship, t.nationality,
+    SLA_AR[slaState(t)], t.beneficiaryName, t.phone1, t.phone2, t.caseCode, t.age, t.gender, t.location, t.relationship, t.nationality,
     t.nationalId, t.unhcrNumber, t.teams.map((x) => x.team.name).join(" + "), t.assignedTo?.fullName,
     t.triageLevel ? TRIAGE_LABELS[t.triageLevel] : "", t.researchDecision ?? "", t.createdBy.fullName,
-    t.createdAt.toISOString(), t.slaDeadline.toISOString(), t.closedAt?.toISOString(), t.closeReason,
+    t.createdAt.toISOString(), t.slaDeadline.toISOString(), t.closedAt?.toISOString(), t.closeCategory, t.closeReason, t.receivedAt?.toISOString(),
   ].map(csvCell).join(","));
 
   const body = "﻿" + [header.map(csvCell).join(","), ...lines].join("\r\n");

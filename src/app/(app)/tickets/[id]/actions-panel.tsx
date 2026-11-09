@@ -4,16 +4,17 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Select, Textarea } from "@/components/ui/form";
 import { DetailsFields, type DetailsDefaults } from "@/components/tickets/details-fields";
+import { CLOSE_CATEGORIES } from "@/lib/workflow";
 import { displayName } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import {
-  assignTicket, closeTicket, decideResearch, deleteTicket, reopenTicket,
+  assignTicket, closeTicket, decideResearch, deleteTicket, receiveTicket, reopenTicket,
   transferTicket, triageTicket, updateTicketDetails,
 } from "@/actions/tickets";
 
 type Perms = {
   canAct: boolean; canClose: boolean; canReopen: boolean;
-  canTriage: boolean; canResearch: boolean; canDelete: boolean;
+  canTriage: boolean; canResearch: boolean; canDelete: boolean; canReceive: boolean;
 };
 
 type Props = {
@@ -24,6 +25,7 @@ type Props = {
   assignable: { id: string; fullName: string }[];
   assignedToId: string | null;
   details: DetailsDefaults;
+  isEmergency: boolean;
 };
 
 export function TicketActions(p: Props) {
@@ -51,6 +53,16 @@ export function TicketActions(p: Props) {
     <div className="space-y-4">
       {err && <div className="animate-expand rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
 
+      {p.perms.canReceive && (
+        <div className="card animate-expand border-brand-300 bg-gradient-to-b from-brand-50 to-white p-4">
+          <p className="mb-3 text-sm text-slate-700">
+            {p.isEmergency ? "عند الاستلام تبدأ مهلة الإنجاز من جديد، وتُسند التذكرة إليك إن لم تكن مُسندة." : "اضغط «استلام» لتأكيد أن فريقك استلم التذكرة وبدأ العمل عليها، وتُسند إليك إن لم تكن مُسندة."}
+          </p>
+          <Button type="button" size="lg" className="w-full" loading={busy === "receive"} disabled={pending}
+            onClick={() => run("receive", "تم استلام التذكرة", () => receiveTicket(p.ticketId))}>📥 استلام التذكرة</Button>
+        </div>
+      )}
+
       {p.perms.canTriage && <TriageCard pending={pending} onSubmit={(level, note) => run("triage", "تم تصنيف الحالة", () => triageTicket(p.ticketId, level, note))} />}
       {p.perms.canResearch && <ResearchCard pending={pending} onSubmit={(d, c) => run("research", d === "accepted" ? "تم قبول الحالة" : "تم رفض الحالة وإغلاق التذكرة", () => decideResearch(p.ticketId, d, c))} />}
 
@@ -72,8 +84,8 @@ export function TicketActions(p: Props) {
       )}
 
       {p.perms.canClose && (
-        <NoteAction title="إغلاق التذكرة" icon="✅" placeholder="ملخص ما تم أو سبب الإغلاق (إلزامي)" button="إغلاق التذكرة"
-          variant="secondary" pending={pending} busy={busy === "close"} onSubmit={(t, clear) => run("close", "تم إغلاق التذكرة", () => closeTicket(p.ticketId, t), clear)} />
+        <CloseCard pending={pending} busy={busy === "close"}
+          onSubmit={(cat, t, clear) => run("close", "تم إغلاق التذكرة", () => closeTicket(p.ticketId, cat, t), clear)} />
       )}
 
       {p.perms.canReopen && (
@@ -194,6 +206,24 @@ function EditCard({ details, pending, busy, onSubmit }: {
           </div>
         </form>
       )}
+    </Card>
+  );
+}
+
+function CloseCard({ pending, busy, onSubmit }: {
+  pending: boolean; busy: boolean; onSubmit: (category: string, text: string, clear: () => void) => void;
+}) {
+  const [cat, setCat] = useState("");
+  const [text, setText] = useState("");
+  return (
+    <Card title="إغلاق التذكرة" icon="✅">
+      <Select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="سبب إغلاق التذكرة">
+        <option value="">سبب إغلاق التذكرة (إلزامي)...</option>
+        {CLOSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+      </Select>
+      <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="سبب الغلق / تفاصيل (اختياري)" className="mt-2 min-h-[60px]" />
+      <Button type="button" variant="secondary" className="mt-2 w-full" disabled={pending || !cat} loading={busy}
+        onClick={() => onSubmit(cat, text, () => { setCat(""); setText(""); })}>إغلاق التذكرة</Button>
     </Card>
   );
 }

@@ -14,7 +14,11 @@ export function describeEvent(action: string, metadata: unknown): string {
     case "triaged": return withNote(`صنّفها طبيب الخط الساخن حالةً ${m.level === "urgent" ? "عاجلة" : "طارئة"} ← ${list(m.to)}`, m.note);
     case "research_accepted": return withNote(`قبلت الأبحاث الحالة ← ${list(m.to)}`, m.comment);
     case "research_rejected": return withNote("رفضت الأبحاث الحالة وأُغلقت التذكرة", m.comment);
-    case "closed": return withNote("أُغلقت التذكرة", m.reason);
+    case "closed": return withNote(`أُغلقت التذكرة${m.category ? ` — ${m.category}` : ""}`, m.reason);
+    case "received": {
+      const mins = Number(m.slaMinutes ?? 0);
+      return `📥 استلم التذكرة${mins ? ` — بدأت مهلة الإنجاز من جديد (${mins >= 60 ? `${Math.round(mins / 60)} ساعة` : `${mins} دقيقة`})` : ""}`;
+    }
     case "reopened": return withNote("أُعيد فتح التذكرة", m.note);
     case "assigned": return m.to ? `أُسندت إلى ${m.to}` : "أُلغي الإسناد";
     case "attachment_added": return `أُضيف مرفق: ${list(m.files)}`;

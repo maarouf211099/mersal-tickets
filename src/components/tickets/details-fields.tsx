@@ -1,12 +1,12 @@
 "use client";
 import { useState } from "react";
 import { Input, Label, Select, Textarea } from "@/components/ui/form";
-import { EGYPTIAN, NATIONALITIES, RELATIONSHIPS } from "@/lib/workflow";
+import { EGYPTIAN, GENDERS, NATIONALITIES, RELATIONSHIPS } from "@/lib/workflow";
 
 export type DetailsDefaults = {
   beneficiaryName?: string; phone1?: string; phone2?: string | null; caseCode?: string | null;
   relationship?: string; nationality?: string; nationalId?: string | null; unhcrNumber?: string | null;
-  description?: string | null;
+  description?: string | null; age?: number | null; gender?: string | null; location?: string | null;
 };
 
 // بيانات المستفيد — مشتركة بين فورم الإنشاء وفورم التعديل
@@ -20,6 +20,21 @@ export function DetailsFields({ d = {} }: { d?: DetailsDefaults }) {
       <div className="md:col-span-2">
         <Label htmlFor="beneficiaryName" required>الاسم</Label>
         <Input id="beneficiaryName" name="beneficiaryName" required defaultValue={d.beneficiaryName} />
+      </div>
+      <div>
+        <Label htmlFor="age">السن</Label>
+        <Input id="age" name="age" type="number" min={0} max={120} inputMode="numeric" dir="ltr" defaultValue={d.age ?? ""} />
+      </div>
+      <div>
+        <Label htmlFor="gender">النوع</Label>
+        <Select id="gender" name="gender" defaultValue={d.gender ?? ""}>
+          <option value="">اختر...</option>
+          {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
+        </Select>
+      </div>
+      <div className="md:col-span-2">
+        <Label htmlFor="location">مكان الحالة</Label>
+        <Input id="location" name="location" maxLength={200} placeholder="المحافظة / المنطقة / العنوان" defaultValue={d.location ?? ""} />
       </div>
       <div>
         <Label htmlFor="phone1" required>رقم الهاتف الأول</Label>
