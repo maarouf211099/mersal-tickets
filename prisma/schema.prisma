@@ -107,6 +107,7 @@ model User {
   assignedTickets   Ticket[]        @relation("AssignedTickets")
   closedTickets     Ticket[]        @relation("ClosedTickets")
   receivedTickets   Ticket[]        @relation("ReceivedTickets")
+  ambulanceRequests AmbulanceRequest[]
   researchDecisions Ticket[]        @relation("ResearchDecisions")
   comments          TicketComment[]
   events            TicketEvent[]
@@ -182,6 +183,7 @@ model Ticket {
   events        TicketEvent[]
   attachments   Attachment[]
   notifications Notification[]
+  ambulanceRequests AmbulanceRequest[]
 
   @@index([status])
   @@index([type])
@@ -264,6 +266,24 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([createdAt])
+}
+
+// طلبات الإسعاف المبعوتة لنظام إسعاف مرسال من التذكرة
+model AmbulanceRequest {
+  id            String    @id @default(cuid())
+  ticketId      String
+  ticket        Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  remoteId      Int // رقم البلاغ في نظام الإسعاف
+  service       String // حالة مرسال / برايفت / تداوي / استكشاف
+  serviceDate   String
+  payload       Json // اللي اتبعت بالظبط
+  createdById   String
+  createdBy     User      @relation(fields: [createdById], references: [id])
+  createdAt     DateTime  @default(now())
+  lastStatus    String? // آخر حالة اتقرت من نظام الإسعاف
+  lastCheckedAt DateTime?
+
+  @@index([ticketId])
 }
 
 // السجل العام للنظام: الدخول، المستخدمين، الفرق، الموافقات، حذف التذاكر

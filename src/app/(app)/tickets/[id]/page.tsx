@@ -10,6 +10,9 @@ import { TicketActions } from "./actions-panel";
 import { CommentBox } from "./comment-box";
 import { UploadBox } from "./upload-box";
 import { CommentBody } from "./comment-item";
+import Link from "next/link";
+import { canRequestAmbulance } from "@/lib/ambulance-access";
+import { STATUS_AR as AMB_STATUS, ambulanceEnabled, ambulanceLink, ambulanceStatus } from "@/lib/ambulance";
 import { describeEvent } from "@/lib/event-text";
 import { RichText } from "@/components/ui/rich-text";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -47,6 +50,23 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
     // تعديل وحذف التحديثات مش بيظهروا في سجل التذكرة — بيتسجلوا في السجل العام للمدير بس
     ...ticket.events.filter((e) => !HIDDEN_EVENTS.has(e.action)).map((e) => ({ kind: "event" as const, at: e.createdAt, e })),
   ].sort((a, b) => a.at.getTime() - b.at.getTime());
+
+  // طلبات الإسعاف: بنحدّث حالتها من نظام الإسعاف لو آخر قراءة أقدم من دقيقتين
+  let ambReqs = await prisma.ambulanceRequest.findMany({
+    where: { ticketId: ticket.id }, orderBy: { createdAt: "desc" }, include: { createdBy: { select: { fullName: true } } },
+  });
+  if (ambulanceEnabled() && ambReqs.some((r) => !r.lastCheckedAt || Date.now() - r.lastCheckedAt.getTime() > 120_000)) {
+    await Promise.all(ambReqs.map(async (r) => {
+      try {
+        const st = await ambulanceStatus(r.remoteId);
+        if (st.status) await prisma.ambulanceRequest.update({ where: { id: r.id }, data: { lastStatus: st.status, lastCheckedAt: new Date() } });
+      } catch { /* نظام الإسعاف مش متاح — آخر حالة معروفة */ }
+    }));
+    ambReqs = await prisma.ambulanceRequest.findMany({
+      where: { ticketId: ticket.id }, orderBy: { createdAt: "desc" }, include: { createdBy: { select: { fullName: true } } },
+    });
+  }
+  const canAmbulance = canRequestAmbulance(user) && ticket.status === "pending";
 
   const since = holders.reduce<Date | null>((a, h) => (!a || h.addedAt > a ? h.addedAt : a), null);
 
@@ -166,6 +186,39 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           )}
           </div>
         </div>
+
+        {(ambReqs.length > 0 || canAmbulance) && (
+          <div className="card p-6">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <SectionTitle icon="🚑" title="طلبات الإسعاف" count={ambReqs.length} />
+              {canAmbulance && (
+                <Link href={`/tickets/${ticket.id}/ambulance`} className="no-print inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-red-600/20 transition hover:-translate-y-0.5 hover:bg-red-700">
+                  🚑 طلب إسعاف
+                </Link>
+              )}
+            </div>
+            {ambReqs.length === 0 ? (
+              <p className="text-sm text-slate-400">لم يُرسل أي طلب إسعاف لهذه التذكرة بعد.</p>
+            ) : (
+              <ul className="space-y-2">
+                {ambReqs.map((r) => (
+                  <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 px-3 py-2.5 text-sm">
+                    <div>
+                      <a href={ambulanceLink(r.remoteId)} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-700 hover:underline">
+                        بلاغ إسعاف #{r.remoteId}
+                      </a>
+                      <span className="text-slate-500"> — {r.service} · موعد الخدمة {r.serviceDate}</span>
+                      <div className="text-xs text-slate-400">أرسله {displayName(r.createdBy.fullName)} • {formatDateTime(r.createdAt)}</div>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${AMB_TONE[r.lastStatus ?? ""] ?? "bg-slate-100 text-slate-600"}`}>
+                      {AMB_STATUS[r.lastStatus ?? ""] ?? "غير معروف"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <div className="card p-6">
           <SectionTitle icon="📎" title="المرفقات" count={ticket.attachments.length} />
@@ -294,9 +347,15 @@ function Info({ label, children, mono }: { label: string; children: React.ReactN
   );
 }
 
+const AMB_TONE: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-800", "in-progress": "bg-sky-100 text-sky-800",
+  "pending-close": "bg-violet-100 text-violet-800", completed: "bg-emerald-100 text-emerald-800", cancelled: "bg-slate-200 text-slate-600",
+};
+
 const HIDDEN_EVENTS = new Set(["comment_edited", "comment_deleted"]);
 
 const EVENT_DOT: Record<string, string> = {
+  ambulance_sent: "bg-red-600",
   created: "bg-brand-500",
   transferred: "bg-sky-500",
   triaged: "bg-pink-500",

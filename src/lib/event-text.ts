@@ -23,6 +23,7 @@ export function describeEvent(action: string, metadata: unknown): string {
     case "assigned": return m.to ? `أُسندت إلى ${m.to}` : "أُلغي الإسناد";
     case "attachment_added": return `أُضيف مرفق: ${list(m.files)}`;
     case "sla_breached": return "⛔ تجاوزت التذكرة مهلة الإنجاز";
+    case "ambulance_sent": return `🚑 أُرسل طلب إسعاف لنظام إسعاف مرسال — بلاغ رقم ${m.remoteId} (${m.service}) بتاريخ ${m.serviceDate}`;
     case "comment_edited":
       return `✏️ عدّل ${m.kind === "note" ? "ملاحظة" : "تحديثًا"}: "${clip(m.from)}" ← "${clip(m.to)}"`;
     case "comment_deleted":
