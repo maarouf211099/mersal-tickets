@@ -181,3 +181,38 @@ input, textarea, select { font-size: 14px; }
 
 /* عنصر جديد بيظهر (تحديث اتضاف للسجل) */
 @keyframes flash-in { 0% { background-color: #ccfbf1; } 100% { background-color: transparent; } }
+
+/* ─── الجولة الشاملة ─────────────────────────────────── */
+
+/* خلفية التطبيق: تدرّج خفيف بلون مرسال فوق */
+.app-bg {
+  background:
+    radial-gradient(1100px 420px at 88% -120px, rgba(20, 184, 166, 0.11), transparent 62%),
+    radial-gradient(900px 380px at 6% -140px, rgba(240, 180, 41, 0.09), transparent 60%),
+    #f6f8fa;
+  background-attachment: fixed;
+}
+
+::selection { background: #99f6e4; color: #134e4a; }
+html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
+:focus-visible { outline: 2px solid #14b8a6; outline-offset: 2px; border-radius: 6px; }
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
+
+/* شريط تحميل التنقل */
+@keyframes route-load { 0% { transform: scaleX(0); } 20% { transform: scaleX(0.35); } 60% { transform: scaleX(0.7); } 100% { transform: scaleX(0.92); } }
+@keyframes route-done { 0% { transform: scaleX(0.92); opacity: 1; } 60% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(1); opacity: 0; } }
+.animate-route-load { animation: route-load 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards; }
+.animate-route-done { animation: route-done 0.4s ease-out forwards; }
+
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.animate-fade { animation: fade 0.2s ease-out; }
+
+/* علامة الاختيار في كروت الاختيار */
+@keyframes check-pop { 0% { transform: scale(0); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+.animate-check { animation: check-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* حقول الإدخال: إضاءة ناعمة عند التركيز */
+input, textarea, select { transition: border-color 0.15s ease, box-shadow 0.2s ease, background-color 0.15s ease; }
+
+/* مسافة آمنة لشريط الموبايل السفلي */
+.pb-safe { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }

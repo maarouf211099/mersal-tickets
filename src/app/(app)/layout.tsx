@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Nav } from "@/components/layout/nav";
 import { Toaster } from "@/components/ui/toast";
+import { Suspense } from "react";
+import { RouteProgress, ScrollTop } from "@/components/layout/route-progress";
 import { ForcePasswordChange } from "@/components/account/force-password";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -17,9 +19,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="app-bg min-h-screen">
+      <Suspense fallback={null}><RouteProgress /></Suspense>
       <Nav user={{ name: user.name, role: user.role, teams: teams.map((t) => t.name) }} initialUnread={unread} />
-      <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">{children}</main>
+      <main className="mx-auto max-w-[1400px] px-4 pb-24 pt-6 sm:px-6 lg:pb-10">{children}</main>
+      <ScrollTop />
       <Toaster />
     </div>
   );

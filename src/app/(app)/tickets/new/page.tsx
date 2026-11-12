@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/access";
 import { SOURCE_BY_TEAM_CODE, transferTargets } from "@/lib/workflow";
 import { NewTicketForm } from "./form";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function NewTicketPage() {
   const s = await auth();
@@ -16,9 +17,8 @@ export default async function NewTicketPage() {
   const defaultSource = user.teamCodes.map((c) => SOURCE_BY_TEAM_CODE[c]).find(Boolean) ?? "";
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-bold text-slate-900">تذكرة جديدة</h1>
-      <p className="mb-6 mt-1 text-sm text-slate-500">أدخل بيانات الحالة واختر الفريق الذي ستُحوَّل إليه</p>
+    <div className="mx-auto max-w-3xl space-y-5">
+      <PageHeader icon="➕" title="تذكرة جديدة" subtitle="أدخل بيانات الحالة واختر الفريق الذي ستُحوَّل إليه" />
       <NewTicketForm
         targets={targets.map((t) => ({ id: t.id, name: t.name, color: t.color }))}
         defaultSource={defaultSource}

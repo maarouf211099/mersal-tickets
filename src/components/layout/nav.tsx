@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { logout } from "@/actions/auth";
 import { cn, displayName } from "@/lib/utils";
 import { Logo } from "./logo";
+import { QuickSearch, openQuickSearch } from "./quick-search";
 
 type NavUser = { name: string; role: string; teams: string[] };
 
@@ -13,7 +14,6 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
   const router = useRouter();
   const [unread, setUnread] = useState(initialUnread);
   const [toast, setToast] = useState<{ title: string; body?: string; ticketId?: string } | null>(null);
-  const [q, setQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -79,11 +79,6 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
       Notification.requestPermission().catch(() => {});
     }
   }, []);
-
-  function submitSearch(e: React.FormEvent) {
-    e.preventDefault();
-    if (q.trim()) router.push(`/tickets?q=${encodeURIComponent(q.trim())}`);
-  }
 
   // مجموعات التنقل - كل مجموعة بينها فاصل
   const primaryNav = [
@@ -153,17 +148,13 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
             <QuickAdd href="/approvals/new" label="موافقة" color="gold" />
           </div>
 
-          {/* Search */}
-          <form onSubmit={submitSearch} className="hidden min-[1700px]:block">
-            <div className="relative group">
-              <SearchIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 transition-colors group-focus-within:text-brand-600" />
-              <input
-                value={q} onChange={(e) => setQ(e.target.value)}
-                placeholder="بحث..."
-                className="w-52 rounded-full border border-slate-200 bg-slate-50/70 py-2 pr-10 pl-4 text-sm transition-all placeholder:text-slate-400 focus:w-64 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:shadow-md"
-              />
-            </div>
-          </form>
+          {/* Search — بيفتح البحث السريع (Ctrl+K) */}
+          <button type="button" onClick={openQuickSearch} title="بحث (Ctrl+K)" aria-label="بحث"
+            className="group flex h-9 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50/70 px-2.5 text-sm text-slate-400 transition-all hover:border-brand-300 hover:bg-white hover:text-brand-700 hover:shadow-sm min-[1700px]:w-52 min-[1700px]:px-3.5">
+            <SearchIcon className="h-4 w-4 shrink-0" />
+            <span className="hidden flex-1 text-right min-[1700px]:block">بحث…</span>
+            <kbd className="hidden rounded border border-slate-200 bg-white px-1.5 text-[10px] font-medium text-slate-400 min-[1700px]:block">Ctrl K</kbd>
+          </button>
 
           {/* User Menu */}
           <div className="relative">
@@ -227,6 +218,28 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
           </div>
         </div>
       </nav>
+
+      <QuickSearch canCreate={user.role !== "viewer"} />
+
+      {/* شريط التنقل السفلي — الموبايل والتابلت */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-md lg:hidden no-print pb-safe">
+        <div className="mx-auto grid max-w-md grid-cols-5 items-end px-2 pt-1.5">
+          <TabLink href="/dashboard" label="الرئيسية" icon={HomeIcon} active={isActive("/dashboard")} />
+          <TabLink href="/tickets" label="التذاكر" icon={TicketIcon} active={isActive("/tickets") && pathname !== "/tickets/new"} />
+          {user.role !== "viewer" ? (
+            <Link href="/tickets/new" aria-label="تذكرة جديدة" className="-mt-6 flex flex-col items-center gap-0.5">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-600/30 ring-4 ring-white transition active:scale-95">
+                <PlusIcon className="h-6 w-6" />
+              </span>
+              <span className="text-[10px] font-medium text-slate-500">جديدة</span>
+            </Link>
+          ) : <span />}
+          <TabLink href="/notifications" label="الإشعارات" icon={BellIcon} active={isActive("/notifications")} badge={unread} />
+          <button type="button" onClick={openQuickSearch} className="flex flex-col items-center gap-0.5 py-1 text-slate-500">
+            <SearchIcon className="h-5 w-5" /><span className="text-[10px] font-medium">بحث</span>
+          </button>
+        </div>
+      </div>
 
       {/* Toast */}
       {toast && (
@@ -294,6 +307,23 @@ function NavLink({ href, label, icon: Icon, active, badge }: {
       )}
       {active && (
         <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-brand-600 rounded-full" />
+      )}
+    </Link>
+  );
+}
+
+function TabLink({ href, label, icon: Icon, active, badge }: {
+  href: string; label: string; icon: React.ComponentType<{ className?: string }>; active: boolean; badge?: number;
+}) {
+  return (
+    <Link href={href} aria-current={active ? "page" : undefined}
+      className={cn("relative flex flex-col items-center gap-0.5 py-1 transition-colors", active ? "text-brand-700" : "text-slate-500")}>
+      <span className={cn("flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-brand-50")}>
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="text-[10px] font-medium">{label}</span>
+      {typeof badge === "number" && badge > 0 && (
+        <span className="absolute right-1/2 top-0 -mr-5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{badge > 99 ? "99+" : badge}</span>
       )}
     </Link>
   );

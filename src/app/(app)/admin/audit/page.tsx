@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { describeEvent, describeSystemEvent } from "@/lib/event-text";
 import { Input, Select } from "@/components/ui/form";
 import { displayName, formatDateTime } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -81,10 +82,7 @@ export default async function AuditPage({ searchParams }: {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">السجل العام</h1>
-        <p className="mt-1 text-sm text-slate-500">كل ما يحدث في النظام: من فعل ماذا ومتى — التذاكر والتحديثات، والدخول، والمستخدمين، والفرق، والموافقات.</p>
-      </div>
+      <PageHeader icon="🕘" title="السجل العام" subtitle="كل ما يحدث في النظام: من فعل ماذا ومتى — التذاكر والتحديثات، والدخول، والمستخدمين، والفرق، والموافقات." />
 
       <form method="get" className="card grid grid-cols-1 gap-3 p-4 md:grid-cols-5">
         <Select name="source" defaultValue={source}>

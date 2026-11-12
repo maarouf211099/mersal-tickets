@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/page-header";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -54,16 +55,12 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">الموافقات الطبية</h1>
-          <p className="mt-1 text-sm text-slate-500">إجمالي {approvals.length} موافقة</p>
-        </div>
+      <PageHeader icon="📑" title="الموافقات الطبية" subtitle={`إجمالي ${approvals.length} موافقة`}>
         <Link href="/approvals/new"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-brand-700">
+          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700 active:scale-[0.97]">
           + موافقة جديدة
         </Link>
-      </div>
+      </PageHeader>
 
       {/* فلاتر الفئات */}
       <div className="flex flex-wrap gap-2">

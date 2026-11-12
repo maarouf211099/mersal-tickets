@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/utils";
 import { MarkAllButton, OpenLink } from "./client";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -19,13 +20,9 @@ export default async function NotificationsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">الإشعارات</h1>
-          <p className="mt-1 text-sm text-slate-500">{unread} غير مقروءة</p>
-        </div>
+      <PageHeader icon="🔔" title="الإشعارات" subtitle={unread > 0 ? `${unread} غير مقروءة` : "كل الإشعارات مقروءة"}>
         {unread > 0 && <MarkAllButton />}
-      </div>
+      </PageHeader>
       <ul className="card stagger divide-y divide-slate-100 overflow-hidden">
         {items.map((n) => (
           <li key={n.id} className={`flex items-start justify-between gap-3 p-4 transition-colors hover:bg-slate-50 ${n.isRead ? "" : "bg-brand-50/50"}`}>

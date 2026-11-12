@@ -10,6 +10,7 @@ import { SlaCountdown } from "@/components/tickets/sla-countdown";
 import { Input, Select } from "@/components/ui/form";
 import { displayName, formatDateTime } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 50;
@@ -93,24 +94,18 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">التذاكر</h1>
-          <p className="mt-1 text-sm text-slate-500">{total} تذكرة</p>
-        </div>
-        <div className="flex gap-2">
-          {canExport && (
-            <a href={`/api/export/tickets?${qs({})}`} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-              ⬇️ تصدير Excel
-            </a>
-          )}
-          {user.role !== "viewer" && (
-            <Link href="/tickets/new" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700">
-              + تذكرة جديدة
-            </Link>
-          )}
-        </div>
-      </div>
+      <PageHeader icon="🎫" title="التذاكر" subtitle={`${total} تذكرة`}>
+        {canExport && (
+          <a href={`/api/export/tickets?${qs({})}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50">
+            ⬇️ تصدير Excel
+          </a>
+        )}
+        {user.role !== "viewer" && (
+          <Link href="/tickets/new" className="group hidden items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700 active:scale-[0.97] lg:inline-flex">
+            <span className="text-base leading-none transition-transform duration-300 group-hover:rotate-90">+</span> تذكرة جديدة
+          </Link>
+        )}
+      </PageHeader>
 
       <div className="flex flex-wrap gap-2">
         {TABS.map((t) => (
@@ -163,7 +158,49 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
         {sortKey && <input type="hidden" name="dir" value={sortDir} />}
       </form>
 
-      <div className="card overflow-x-auto">
+      {/* الموبايل: كروت بدل الجدول */}
+      <div className="flex flex-wrap gap-2 text-xs md:hidden">
+        {[["الأحدث أولًا", "created", "desc"], ["الأقدم أولًا", "created", "asc"], ["الأقرب للمهلة", "deadline", "asc"]].map(([label, k, d]) => (
+          <Link key={label} href={`/tickets?${qs({ sort: k, dir: d, page: "" })}`}
+            className={`rounded-full px-3 py-1.5 font-medium ${sortKey === k && sortDir === d ? "bg-slate-800 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200"}`}>{label}</Link>
+        ))}
+      </div>
+      <div className="stagger space-y-3 md:hidden">
+        {tickets.map((t) => {
+          const sla = slaState(t, now);
+          return (
+            <Link key={t.id} href={`/tickets/${t.id}`}
+              className={`card block border-r-4 p-4 transition active:scale-[0.99] ${TYPE_STRIPE[t.type]} ${t.status === "pending" && sla === "breached" ? "bg-red-50/60" : ""}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate font-semibold text-slate-900">{t.beneficiaryName}</div>
+                  <div className="font-mono text-xs text-slate-400">
+                    {t.ticketNumber}{t._count.comments > 0 && ` · 💬${t._count.comments}`}{t._count.attachments > 0 && ` · 📎${t._count.attachments}`}
+                  </div>
+                </div>
+                <TypeBadge type={t.type} />
+              </div>
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                {t.teams.filter((x) => x.access === "holder").map((x) => <TeamChip key={x.teamId} name={x.team.name} color={x.team.color} />)}
+                <StatusBadge status={t.status} />
+                <SlaBadge state={sla} />
+              </div>
+              <div className="mt-2.5 flex items-center justify-between gap-2 text-xs text-slate-500">
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <Avatar name={t.createdBy.fullName} size="xs" />
+                  <span className="truncate">{displayName(t.createdBy.fullName)} · {formatDateTime(t.createdAt)}</span>
+                </span>
+                {t.status === "pending" && <SlaCountdown deadline={t.slaDeadline.toISOString()} />}
+              </div>
+            </Link>
+          );
+        })}
+        {tickets.length === 0 && (
+          <div className="card py-14 text-center"><div className="text-4xl">🔍</div><p className="mt-2 text-sm text-slate-500">لا توجد تذاكر مطابقة لمعايير البحث</p></div>
+        )}
+      </div>
+
+      <div className="card hidden overflow-x-auto md:block">
         <table className="data-table rows-in min-w-[900px]">
           <thead>
             <tr>

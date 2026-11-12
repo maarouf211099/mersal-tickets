@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TeamsClient } from "./client";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +16,7 @@ export default async function TeamsPage() {
   });
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">الفرق</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          يظهر &quot;فريق الاستقبال&quot; خيارًا للتحويل لدى الجميع، أما الفريق المقيَّد فيظهر لأعضاء الفريق المحدد فقط (مثل طبيب الخط الساخن الذي يظهر لخط طوارئ مرسال وحده).
-        </p>
-      </div>
+      <PageHeader icon="👥" title="الفرق" subtitle="«فريق الاستقبال» يظهر خيارًا للتحويل لدى الجميع، والفريق المقيَّد يظهر لأعضاء الفريق المحدد فقط." />
       <TeamsClient teams={teams.map((t) => ({
         id: t.id, code: t.code, name: t.name, description: t.description ?? "", color: t.color,
         isActive: t.isActive, isReceiver: t.isReceiver, transferOnlyFromId: t.transferOnlyFromId,

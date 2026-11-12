@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { UsersClient } from "./client";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +19,7 @@ export default async function UsersPage() {
   ]);
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">المستخدمون</h1>
-        <p className="mt-1 text-sm text-slate-500">يطّلع كل المستخدمين على كل التذاكر ويعدّلون فيها، ويُسجَّل كل تعديل باسم صاحبه في السجل.</p>
-      </div>
+      <PageHeader icon="👤" title="المستخدمون" subtitle="يطّلع كل المستخدمين على كل التذاكر ويعدّلون فيها، ويُسجَّل كل تعديل باسم صاحبه في السجل." />
       <UsersClient
         meId={s.user.id}
         teams={teams}

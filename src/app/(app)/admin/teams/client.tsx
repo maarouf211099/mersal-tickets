@@ -13,33 +13,52 @@ type T = {
 export function TeamsClient({ teams }: { teams: T[] }) {
   const [adding, setAdding] = useState(false);
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {!adding ? <Button onClick={() => setAdding(true)}>+ فريق جديد</Button> : <TeamEditor teams={teams} onDone={() => setAdding(false)} />}
-      {teams.map((t) => <TeamRow key={t.id} t={t} teams={teams} />)}
+      <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {teams.map((t) => <TeamCard key={t.id} t={t} teams={teams} />)}
+      </div>
     </div>
   );
 }
 
-function TeamRow({ t, teams }: { t: T; teams: T[] }) {
+function TeamCard({ t, teams }: { t: T; teams: T[] }) {
   const [editing, setEditing] = useState(false);
-  if (editing) return <TeamEditor teams={teams} team={t} onDone={() => setEditing(false)} />;
+  if (editing) return <div className="col-span-full animate-expand"><TeamEditor teams={teams} team={t} onDone={() => setEditing(false)} /></div>;
   const from = teams.find((x) => x.id === t.transferOnlyFromId);
   return (
-    <div className={`card flex flex-wrap items-center justify-between gap-3 p-4 ${t.isActive ? "" : "opacity-60"}`}>
-      <div className="flex items-center gap-3">
-        <span className="h-4 w-4 rounded-full" style={{ background: t.color }} />
-        <div>
-          <div className="font-semibold text-slate-900">{t.name}</div>
-          <div className="mt-1 flex flex-wrap gap-1 text-xs">
-            {t.isReceiver && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-800">فريق استقبال</span>}
-            {from && <span className="rounded-full bg-pink-100 px-2 py-0.5 text-pink-800">🔒 يظهر لـ{from.name} فقط</span>}
-            {!t.isActive && <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-700">موقوف</span>}
-            {t.code && <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-slate-500">{t.code}</span>}
-            <span className="text-slate-500">{t.members} عضو · {t.open} تذكرة مفتوحة</span>
+    <div className={`card card-hover group overflow-hidden ${t.isActive ? "" : "opacity-60"}`}>
+      <div className="h-1.5" style={{ background: t.color }} />
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg font-bold text-white shadow-sm transition-transform duration-300 group-hover:scale-110" style={{ background: t.color }}>
+              {t.name.replace(/^(فريق|ال)\s*/, "").charAt(0)}
+            </span>
+            <div className="min-w-0">
+              <div className="truncate font-bold text-slate-900">{t.name}</div>
+              {t.description && <div className="truncate text-xs text-slate-500">{t.description}</div>}
+            </div>
+          </div>
+          <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>تعديل</Button>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1 text-xs">
+          {t.isReceiver && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-800">فريق استقبال</span>}
+          {from && <span className="rounded-full bg-pink-100 px-2 py-0.5 text-pink-800">🔒 يظهر لـ{from.name} فقط</span>}
+          {!t.isReceiver && !from && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">مصدر إدخال</span>}
+          {!t.isActive && <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-700">موقوف</span>}
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+          <div className="rounded-xl bg-slate-50 py-2 ring-1 ring-slate-100">
+            <div className="text-xl font-bold text-slate-900">{t.members}</div>
+            <div className="text-[11px] text-slate-500">عضو</div>
+          </div>
+          <div className="rounded-xl bg-slate-50 py-2 ring-1 ring-slate-100">
+            <div className={`text-xl font-bold ${t.open > 0 ? "text-brand-700" : "text-slate-900"}`}>{t.open}</div>
+            <div className="text-[11px] text-slate-500">تذكرة مفتوحة</div>
           </div>
         </div>
       </div>
-      <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>تعديل</Button>
     </div>
   );
 }

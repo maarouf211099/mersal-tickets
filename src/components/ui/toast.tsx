@@ -34,7 +34,7 @@ export function Toaster() {
   }, []);
 
   return (
-    <div className="pointer-events-none fixed bottom-4 left-1/2 z-[60] flex w-[min(92vw,380px)] -translate-x-1/2 flex-col gap-2 no-print" aria-live="polite">
+    <div className="pointer-events-none fixed bottom-24 left-1/2 lg:bottom-4 z-[60] flex w-[min(92vw,380px)] -translate-x-1/2 flex-col gap-2 no-print" aria-live="polite">
       {items.map((t) => (
         <div key={t.id}
           className={`pointer-events-auto relative overflow-hidden rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl shadow-slate-900/10 backdrop-blur ${t.leaving ? "animate-toast-out" : "animate-toast-in"}`}>

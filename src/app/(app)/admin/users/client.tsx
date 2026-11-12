@@ -5,6 +5,7 @@ import { createUser, importUsers, resetPassword, updateUser, type ImportResult }
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/form";
 import { ApprovalPermsPanel } from "./approval-perms";
+import { Avatar } from "@/components/ui/avatar";
 
 type Role = "manager" | "supervisor" | "agent" | "viewer";
 type Team = { id: string; name: string; color: string };
@@ -16,6 +17,16 @@ const ROLES: Record<Role, string> = { manager: "مدير", supervisor: "مشرف
 
 export function UsersClient({ users, teams, meId }: { users: U[]; teams: Team[]; meId: string }) {
   const [mode, setMode] = useState<"none" | "one" | "bulk">("none");
+  const [q, setQ] = useState("");
+  const [teamId, setTeamId] = useState("");
+  const [role, setRole] = useState("");
+  const term = q.trim().toLowerCase();
+  const shown = users.filter((u) =>
+    (!term || u.fullName.toLowerCase().includes(term) || u.username.includes(term)) &&
+    (!teamId || (teamId === "none" ? u.teamIds.length === 0 : u.teamIds.includes(teamId))) &&
+    (!role || (role === "inactive" ? !u.isActive : u.role === role)));
+  const filtered = !!(term || teamId || role);
+
   return (
     <div className="space-y-4">
       {mode === "none" && (
@@ -26,33 +37,70 @@ export function UsersClient({ users, teams, meId }: { users: U[]; teams: Team[];
       )}
       {mode === "one" && <UserEditor teams={teams} onDone={() => setMode("none")} />}
       {mode === "bulk" && <BulkImport teams={teams} onDone={() => setMode("none")} />}
-      <div className="space-y-3">
-        {users.map((u) => <UserRow key={u.id} u={u} teams={teams} isMe={u.id === meId} />)}
+
+      <div className="card grid grid-cols-1 gap-3 p-4 md:grid-cols-4">
+        <div className="relative md:col-span-2">
+          <svg viewBox="0 0 24 24" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث بالاسم أو اسم المستخدم…" className="pr-9" />
+        </div>
+        <Select value={teamId} onChange={(e) => setTeamId(e.target.value)} aria-label="الفريق">
+          <option value="">كل الفرق</option>
+          {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          <option value="none">بدون فريق</option>
+        </Select>
+        <Select value={role} onChange={(e) => setRole(e.target.value)} aria-label="الدور">
+          <option value="">كل الأدوار</option>
+          {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          <option value="inactive">الموقوفون</option>
+        </Select>
+      </div>
+
+      <div className="flex items-center justify-between px-1 text-sm text-slate-500">
+        <span>{filtered ? `${shown.length} من ${users.length} مستخدم` : `${users.length} مستخدم`}</span>
+        {filtered && <button type="button" className="text-brand-700 hover:underline" onClick={() => { setQ(""); setTeamId(""); setRole(""); }}>مسح التصفية</button>}
+      </div>
+
+      <div className="card divide-y divide-slate-100 overflow-hidden">
+        {shown.map((u) => <UserRow key={u.id} u={u} teams={teams} isMe={u.id === meId} />)}
+        {shown.length === 0 && (
+          <div className="py-14 text-center text-sm text-slate-400"><div className="mb-2 text-4xl">🔍</div>لا يوجد مستخدم مطابق</div>
+        )}
       </div>
     </div>
   );
 }
 
+const ROLE_TONE: Record<Role, string> = {
+  manager: "bg-slate-800 text-white", supervisor: "bg-violet-100 text-violet-800",
+  agent: "bg-slate-100 text-slate-700", viewer: "bg-slate-100 text-slate-500",
+};
+
 function UserRow({ u, teams, isMe }: { u: U; teams: Team[]; isMe: boolean }) {
   const [editing, setEditing] = useState(false);
   const names = teams.filter((t) => u.teamIds.includes(t.id));
-  if (editing) return <UserEditor teams={teams} user={u} onDone={() => setEditing(false)} />;
+  if (editing) return <div className="animate-expand bg-slate-50/60 p-3"><UserEditor teams={teams} user={u} onDone={() => setEditing(false)} /></div>;
   return (
-    <div className={`card flex flex-wrap items-center justify-between gap-3 p-4 ${u.isActive ? "" : "opacity-60"}`}>
-      <div>
-        <div className="font-semibold text-slate-900">{u.fullName} {isMe && <span className="text-xs text-slate-400">(أنت)</span>}</div>
-        <div className="font-mono text-xs text-slate-500" dir="ltr" style={{ textAlign: "right" }}>@{u.username}</div>
-        <div className="mt-1 flex flex-wrap gap-1 text-xs">
-          <span className="rounded-full bg-slate-800 px-2 py-0.5 text-white">{ROLES[u.role]}</span>
-          {!u.isActive && <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-700">موقوف</span>}
-          {u.canReopen && <span className="rounded-full bg-purple-100 px-2 py-0.5 text-purple-800">إعادة فتح</span>}
-          {u.canExport && <span className="rounded-full bg-sky-100 px-2 py-0.5 text-sky-800">تصدير</span>}
-          {names.map((t) => (
-            <span key={t.id} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
-              <span className="h-2 w-2 rounded-full" style={{ background: t.color }} />{t.name}
-            </span>
-          ))}
-          {names.length === 0 && <span className="text-amber-700">⚠ ليس عضوًا في أي فريق</span>}
+    <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-slate-50/70 ${u.isActive ? "" : "opacity-60"}`}>
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar name={u.fullName} size="md" />
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 font-semibold text-slate-900">
+            <span className="truncate">{u.fullName}</span>
+            {isMe && <span className="text-xs font-normal text-slate-400">(أنت)</span>}
+            <bdi dir="ltr" className="font-mono text-xs font-normal text-slate-400">@{u.username}</bdi>
+          </div>
+          <div className="mt-1 flex flex-wrap gap-1 text-xs">
+            <span className={`rounded-full px-2 py-0.5 font-medium ${ROLE_TONE[u.role]}`}>{ROLES[u.role]}</span>
+            {!u.isActive && <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-700">موقوف</span>}
+            {u.canReopen && <span className="rounded-full bg-purple-100 px-2 py-0.5 text-purple-800">إعادة فتح</span>}
+            {u.canExport && <span className="rounded-full bg-sky-100 px-2 py-0.5 text-sky-800">تصدير</span>}
+            {names.map((t) => (
+              <span key={t.id} className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-slate-700 ring-1 ring-slate-200">
+                <span className="h-2 w-2 rounded-full" style={{ background: t.color }} />{t.name}
+              </span>
+            ))}
+            {names.length === 0 && <span className="text-amber-700">⚠ ليس عضوًا في أي فريق</span>}
+          </div>
         </div>
       </div>
       <div className="flex items-start gap-2">

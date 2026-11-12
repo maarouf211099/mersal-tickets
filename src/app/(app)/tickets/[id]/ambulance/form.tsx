@@ -139,7 +139,7 @@ export function AmbulanceForm({ ticketId, staffName, d }: { ticketId: string; st
         <p className="mt-2 text-xs text-slate-500">🔁 لو المشوار متكرر، اكتب ده في التعليقات، ومنسق الإسعاف يعتمده كحجز متكرر من نظام الإسعاف.</p>
       </Section>
 
-      <div className="sticky bottom-4 z-10 flex justify-end gap-2 rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur">
+      <div className="sticky bottom-20 z-10 lg:bottom-4 flex justify-end gap-2 rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur">
         <Button type="button" variant="ghost" onClick={() => router.back()}>إلغاء</Button>
         <Button type="submit" size="lg" loading={pending}>🚑 إرسال طلب الإسعاف</Button>
       </div>
