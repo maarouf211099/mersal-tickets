@@ -216,3 +216,14 @@ input, textarea, select { transition: border-color 0.15s ease, box-shadow 0.2s e
 
 /* مسافة آمنة لشريط الموبايل السفلي */
 .pb-safe { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+
+/* أعمدة الرسم بتطلع من تحت */
+@keyframes rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.bar-rise { transform-origin: bottom; animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards; }
+
+@media print {
+  aside, .no-print { display: none !important; }
+  .xl\:pr-64 { padding-right: 0 !important; }
+  .card { box-shadow: none; break-inside: avoid; }
+  .app-bg { background: white; }
+}

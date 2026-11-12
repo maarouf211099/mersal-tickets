@@ -92,36 +92,84 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
   const adminNav = user.role === "manager" ? [
     { href: "/admin/teams", label: "الفرق", icon: UsersIcon },
     { href: "/admin/users", label: "المستخدمون", icon: UserIcon },
+    { href: "/admin/reports", label: "التقارير", icon: ChartIcon },
     { href: "/admin/audit", label: "السجل", icon: LogIcon },
+    { href: "/admin/settings", label: "الإعدادات", icon: GearIcon },
   ] : [];
+  const roleAr = user.role === "manager" ? "المدير" : user.role === "supervisor" ? "المشرف" : user.role === "agent" ? "الموظف" : "المشاهد";
 
   const isActive = (href: string) =>
     pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
 
   return (
     <>
-      <nav className={cn("sticky top-0 z-40 border-b backdrop-blur-md transition-all duration-300",
+      {/* القائمة الجانبية — الشاشات الكبيرة */}
+      <aside className="fixed inset-y-0 right-0 z-50 hidden w-64 flex-col overflow-hidden bg-gradient-to-b from-brand-900 via-[#0f5f59] to-brand-900 text-white shadow-2xl shadow-brand-900/30 xl:flex no-print">
+        <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 animate-float rounded-full bg-white/5" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 animate-float-slow rounded-full bg-accent-400/10" />
+        <Link href="/dashboard" className="group relative flex items-center gap-3 px-5 pb-4 pt-5">
+          <span className="transition-transform duration-300 group-hover:rotate-[-6deg] group-hover:scale-105"><Logo size={44} showText={false} /></span>
+          <span>
+            <span className="block text-2xl font-extrabold leading-tight text-accent-400">مرسال</span>
+            <span className="block text-[9px] font-bold uppercase tracking-[0.28em] text-brand-200">نظام التذاكر</span>
+          </span>
+        </Link>
+        {user.role !== "viewer" && (
+          <div className="relative px-4 pb-3">
+            <Link href="/tickets/new" className="group flex items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-sm font-bold text-brand-800 shadow-lg shadow-black/10 transition hover:-translate-y-0.5 hover:bg-accent-50 active:scale-[0.98]">
+              <PlusIcon className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" /> تذكرة جديدة
+            </Link>
+          </div>
+        )}
+        <div className="relative flex-1 overflow-y-auto px-3 pb-3 [scrollbar-width:thin]">
+          <SideLabel>القائمة</SideLabel>
+          {[...primaryNav, ...utilityNav].map((it) => <SideLink key={it.href} {...it} active={isActive(it.href)} />)}
+          {adminNav.length > 0 && (
+            <>
+              <SideLabel>الإدارة</SideLabel>
+              {adminNav.map((it) => <SideLink key={it.href} {...it} active={isActive(it.href)} />)}
+            </>
+          )}
+        </div>
+        <div className="relative border-t border-white/10 p-3">
+          <Link href="/account" className="flex items-center gap-3 rounded-xl p-2 transition hover:bg-white/10">
+            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-sm font-bold text-white ring-2 ring-white/30">
+              {user.name.charAt(0)}
+              <span className="absolute -bottom-0.5 -left-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-brand-900" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold">{user.name}</span>
+              <span className="block truncate text-[11px] text-brand-200">{roleAr}{user.teams.length > 0 && ` · ${user.teams.join("، ")}`}</span>
+            </span>
+          </Link>
+          <button onClick={() => logout()} className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-brand-100/80 transition hover:bg-white/10 hover:text-white">
+            <LogoutIcon className="h-4 w-4" /> تسجيل الخروج
+          </button>
+        </div>
+      </aside>
+
+      <nav className={cn("sticky top-0 z-40 border-b backdrop-blur-md transition-all duration-300 xl:mr-64",
         scrolled ? "border-slate-200 bg-white/85 shadow-md shadow-slate-900/5" : "border-slate-200/80 bg-white/95 shadow-sm")}>
         <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 sm:px-6 h-16">
           {/* Logo */}
-          <Link href="/dashboard" className="shrink-0 group">
+          <Link href="/dashboard" className="shrink-0 group xl:hidden">
             <div className="transition-transform duration-200 group-hover:scale-105">
               <Logo />
             </div>
           </Link>
 
           {/* Primary Navigation */}
-          <div className="hidden lg:flex items-center gap-1 mr-2">
+          <div className="hidden lg:flex xl:hidden items-center gap-1 mr-2">
             {primaryNav.map((it) => (
               <NavLink key={it.href} {...it} active={isActive(it.href)} />
             ))}
           </div>
 
           {/* Divider */}
-          <div className="hidden lg:block h-6 w-px bg-slate-200" />
+          <div className="hidden lg:block xl:hidden h-6 w-px bg-slate-200" />
 
           {/* Utility Navigation */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex xl:hidden items-center gap-1">
             {utilityNav.map((it) => (
               <NavLink key={it.href} {...it} active={isActive(it.href)} />
             ))}
@@ -130,8 +178,8 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
           {/* Admin Section */}
           {adminNav.length > 0 && (
             <>
-              <div className="hidden lg:block h-6 w-px bg-slate-200" />
-              <div className="hidden lg:flex items-center gap-1">
+              <div className="hidden lg:block xl:hidden h-6 w-px bg-slate-200" />
+              <div className="hidden lg:flex xl:hidden items-center gap-1">
                 {adminNav.map((it) => (
                   <NavLink key={it.href} {...it} active={isActive(it.href)} />
                 ))}
@@ -143,17 +191,17 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
           <div className="flex-1" />
 
           {/* Quick Action Buttons - "جديد" */}
-          <div className="hidden min-[1440px]:flex items-center gap-2">
+          <div className="hidden xl:flex items-center gap-2">
             {user.role !== "viewer" && <QuickAdd href="/tickets/new" label="تذكرة" color="teal" />}
             <QuickAdd href="/approvals/new" label="موافقة" color="gold" />
           </div>
 
           {/* Search — بيفتح البحث السريع (Ctrl+K) */}
           <button type="button" onClick={openQuickSearch} title="بحث (Ctrl+K)" aria-label="بحث"
-            className="group flex h-9 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50/70 px-2.5 text-sm text-slate-400 transition-all hover:border-brand-300 hover:bg-white hover:text-brand-700 hover:shadow-sm min-[1700px]:w-52 min-[1700px]:px-3.5">
+            className="group flex h-9 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50/70 px-2.5 text-sm text-slate-400 transition-all hover:border-brand-300 hover:bg-white hover:text-brand-700 hover:shadow-sm xl:order-first xl:h-10 xl:w-80 xl:px-4">
             <SearchIcon className="h-4 w-4 shrink-0" />
-            <span className="hidden flex-1 text-right min-[1700px]:block">بحث…</span>
-            <kbd className="hidden rounded border border-slate-200 bg-white px-1.5 text-[10px] font-medium text-slate-400 min-[1700px]:block">Ctrl K</kbd>
+            <span className="hidden flex-1 truncate text-right xl:block">ابحث بالاسم أو رقم التذكرة…</span>
+            <kbd className="hidden rounded border border-slate-200 bg-white px-1.5 text-[10px] font-medium text-slate-400 xl:block">Ctrl K</kbd>
           </button>
 
           {/* User Menu */}
@@ -312,6 +360,27 @@ function NavLink({ href, label, icon: Icon, active, badge }: {
   );
 }
 
+function SideLabel({ children }: { children: React.ReactNode }) {
+  return <div className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-brand-200/70">{children}</div>;
+}
+
+function SideLink({ href, label, icon: Icon, active, badge }: {
+  href: string; label: string; icon: React.ComponentType<{ className?: string }>; active: boolean; badge?: number;
+}) {
+  return (
+    <Link href={href} aria-current={active ? "page" : undefined}
+      className={cn("group relative mb-0.5 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+        active ? "bg-white/15 text-white shadow-inner shadow-black/10" : "text-brand-100/85 hover:bg-white/10 hover:pr-4 hover:text-white")}>
+      {active && <span className="absolute right-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-l-full bg-accent-400" />}
+      <Icon className={cn("h-[18px] w-[18px] shrink-0 transition-transform duration-200", active ? "text-accent-300" : "group-hover:scale-110")} />
+      <span className="flex-1">{label}</span>
+      {typeof badge === "number" && badge > 0 && (
+        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white animate-pulse-scale">{badge > 99 ? "99+" : badge}</span>
+      )}
+    </Link>
+  );
+}
+
 function TabLink({ href, label, icon: Icon, active, badge }: {
   href: string; label: string; icon: React.ComponentType<{ className?: string }>; active: boolean; badge?: number;
 }) {
@@ -367,6 +436,12 @@ function BellIcon(p: { className?: string }) {
 }
 function UsersIcon(p: { className?: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+}
+function ChartIcon(p: { className?: string }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+}
+function GearIcon(p: { className?: string }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 }
 function LogIcon(p: { className?: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>;

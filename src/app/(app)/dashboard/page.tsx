@@ -7,6 +7,7 @@ import { TYPE_LABELS, slaLabel, slaState, type TicketType } from "@/lib/workflow
 import { SlaBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
 import { CountUp } from "@/components/ui/count-up";
+import { getSettings } from "@/lib/settings";
 import { AlarmIcon, ArrowLeftIcon, CheckCircleIcon, ClockIcon, InboxIcon, PlusIcon, UserCheckIcon } from "@/components/ui/icons";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
     }),
   ]);
 
+  const settings = await getSettings();
   const count = (t: TicketType) => byType.find((x) => x.type === t)?._count ?? 0;
   const totalPending = byType.reduce((a, x) => a + x._count, 0);
   const sortedTeams = [...teams].sort((a, b) => b._count.tickets - a._count.tickets);
@@ -84,7 +86,7 @@ export default async function DashboardPage() {
                   </span>
                   <div>
                     <div className="font-semibold text-slate-800">{TYPE_LABELS[t]}</div>
-                    <div className="text-xs text-slate-500">مهلة الإنجاز: {slaLabel(t)}</div>
+                    <div className="text-xs text-slate-500">مهلة الإنجاز: {slaLabel(t, settings.sla)}</div>
                   </div>
                 </div>
                 <span className="text-3xl font-bold text-slate-900"><CountUp value={n} /></span>

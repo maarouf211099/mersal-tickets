@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/access";
 import { SOURCE_BY_TEAM_CODE, transferTargets } from "@/lib/workflow";
 import { NewTicketForm } from "./form";
+import { getSettings } from "@/lib/settings";
 import { PageHeader } from "@/components/ui/page-header";
 
 export default async function NewTicketPage() {
@@ -22,6 +23,7 @@ export default async function NewTicketPage() {
       <NewTicketForm
         targets={targets.map((t) => ({ id: t.id, name: t.name, color: t.color }))}
         defaultSource={defaultSource}
+        sla={(await getSettings()).sla}
       />
     </div>
   );

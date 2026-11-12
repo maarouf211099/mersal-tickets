@@ -1,7 +1,9 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createUser, importUsers, resetPassword, updateUser, type ImportResult } from "@/actions/admin";
+import { bulkUsers, createUser, importUsers, resetPassword, updateUser, type ImportResult } from "@/actions/admin";
+import { toast } from "@/components/ui/toast";
+import { formatSince } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/form";
 import { ApprovalPermsPanel } from "./approval-perms";
@@ -12,6 +14,7 @@ type Team = { id: string; name: string; color: string };
 type U = {
   id: string; username: string; fullName: string; role: Role; isActive: boolean;
   canReopen: boolean; canExport: boolean; teamIds: string[]; approvalPerms: Record<string, boolean>;
+  lastLoginAt: string | null; mustChangePassword: boolean;
 };
 const ROLES: Record<Role, string> = { manager: "مدير", supervisor: "مشرف", agent: "موظف", viewer: "مشاهد" };
 
@@ -24,8 +27,36 @@ export function UsersClient({ users, teams, meId }: { users: U[]; teams: Team[];
   const shown = users.filter((u) =>
     (!term || u.fullName.toLowerCase().includes(term) || u.username.includes(term)) &&
     (!teamId || (teamId === "none" ? u.teamIds.length === 0 : u.teamIds.includes(teamId))) &&
-    (!role || (role === "inactive" ? !u.isActive : u.role === role)));
+    (!role || (role === "inactive" ? !u.isActive : role === "never" ? !u.lastLoginAt : u.role === role)));
   const filtered = !!(term || teamId || role);
+  const router = useRouter();
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulkTeam, setBulkTeam] = useState("");
+  const [busy, startBulk] = useTransition();
+  const toggle = (id: string) => setPicked((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const pickable = shown.filter((u) => u.id !== meId);
+  const allPicked = pickable.length > 0 && pickable.every((u) => picked.has(u.id));
+
+  function bulk(op: Parameters<typeof bulkUsers>[1], arg?: string) {
+    startBulk(async () => {
+      const r = await bulkUsers([...picked], op, arg);
+      if (!r.ok) { toast(r.error, "error"); return; }
+      toast(`تم تطبيق الإجراء على ${r.count} مستخدم`);
+      setPicked(new Set());
+      router.refresh();
+    });
+  }
+
+  function exportCsv() {
+    const cell = (v: string) => `"${(/^[=+\-@]/.test(v) ? "'" + v : v).replace(/"/g, '""')}"`;
+    const lines = [["الاسم", "اسم المستخدم", "الدور", "الفرق", "نشط", "آخر دخول"], ...shown.map((u) => [
+      u.fullName, u.username, ROLES[u.role], teams.filter((t) => u.teamIds.includes(t.id)).map((t) => t.name).join(" + "),
+      u.isActive ? "نعم" : "لا", u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("ar-EG") : "لم يدخل بعد",
+    ])].map((r) => r.map(cell).join(","));
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" }));
+    a.download = "users.csv"; a.click(); URL.revokeObjectURL(a.href);
+  }
 
   return (
     <div className="space-y-4">
@@ -52,16 +83,43 @@ export function UsersClient({ users, teams, meId }: { users: U[]; teams: Team[];
           <option value="">كل الأدوار</option>
           {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           <option value="inactive">الموقوفون</option>
+          <option value="never">لم يسجّلوا الدخول بعد</option>
         </Select>
       </div>
 
       <div className="flex items-center justify-between px-1 text-sm text-slate-500">
-        <span>{filtered ? `${shown.length} من ${users.length} مستخدم` : `${users.length} مستخدم`}</span>
-        {filtered && <button type="button" className="text-brand-700 hover:underline" onClick={() => { setQ(""); setTeamId(""); setRole(""); }}>مسح التصفية</button>}
+        <label className="flex cursor-pointer items-center gap-2">
+          <input type="checkbox" checked={allPicked} onChange={() => setPicked(allPicked ? new Set() : new Set(pickable.map((u) => u.id)))} />
+          {filtered ? `${shown.length} من ${users.length} مستخدم` : `${users.length} مستخدم`}
+        </label>
+        <span className="flex items-center gap-3">
+          {filtered && <button type="button" className="text-brand-700 hover:underline" onClick={() => { setQ(""); setTeamId(""); setRole(""); }}>مسح التصفية</button>}
+          <button type="button" className="text-brand-700 hover:underline" onClick={exportCsv}>⬇️ تصدير Excel</button>
+        </span>
       </div>
 
+      {picked.size > 0 && (
+        <div className="animate-expand sticky top-20 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-brand-200 bg-brand-50/95 p-3 text-sm shadow-lg backdrop-blur">
+          <span className="font-bold text-brand-900">{picked.size} محدد</span>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => bulk("activate")}>تفعيل</Button>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => { if (confirm(`إيقاف ${picked.size} مستخدم؟ لن يستطيعوا الدخول.`)) bulk("deactivate"); }}>إيقاف</Button>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => {
+            const pw = prompt("كلمة المرور المؤقتة الجديدة (8 أحرف على الأقل) — سيُطلب منهم تغييرها عند الدخول:");
+            if (pw) bulk("reset", pw);
+          }}>إعادة تعيين كلمة المرور</Button>
+          <span className="mx-1 h-5 w-px bg-brand-200" />
+          <Select value={bulkTeam} onChange={(e) => setBulkTeam(e.target.value)} className="!w-44 !py-1.5 text-xs" aria-label="فريق">
+            <option value="">اختر فريقًا…</option>
+            {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </Select>
+          <Button size="sm" variant="secondary" disabled={busy || !bulkTeam} onClick={() => bulk("addTeam", bulkTeam)}>إضافة للفريق</Button>
+          <Button size="sm" variant="secondary" disabled={busy || !bulkTeam} onClick={() => bulk("removeTeam", bulkTeam)}>إزالة من الفريق</Button>
+          <button type="button" className="mr-auto text-xs text-slate-500 hover:text-slate-800" onClick={() => setPicked(new Set())}>إلغاء التحديد</button>
+        </div>
+      )}
+
       <div className="card divide-y divide-slate-100 overflow-hidden">
-        {shown.map((u) => <UserRow key={u.id} u={u} teams={teams} isMe={u.id === meId} />)}
+        {shown.map((u) => <UserRow key={u.id} u={u} teams={teams} isMe={u.id === meId} picked={picked.has(u.id)} onPick={() => toggle(u.id)} />)}
         {shown.length === 0 && (
           <div className="py-14 text-center text-sm text-slate-400"><div className="mb-2 text-4xl">🔍</div>لا يوجد مستخدم مطابق</div>
         )}
@@ -75,13 +133,14 @@ const ROLE_TONE: Record<Role, string> = {
   agent: "bg-slate-100 text-slate-700", viewer: "bg-slate-100 text-slate-500",
 };
 
-function UserRow({ u, teams, isMe }: { u: U; teams: Team[]; isMe: boolean }) {
+function UserRow({ u, teams, isMe, picked, onPick }: { u: U; teams: Team[]; isMe: boolean; picked: boolean; onPick: () => void }) {
   const [editing, setEditing] = useState(false);
   const names = teams.filter((t) => u.teamIds.includes(t.id));
   if (editing) return <div className="animate-expand bg-slate-50/60 p-3"><UserEditor teams={teams} user={u} onDone={() => setEditing(false)} /></div>;
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-slate-50/70 ${u.isActive ? "" : "opacity-60"}`}>
+    <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 transition-colors ${picked ? "bg-brand-50/60" : "hover:bg-slate-50/70"} ${u.isActive ? "" : "opacity-60"}`}>
       <div className="flex min-w-0 items-center gap-3">
+        <input type="checkbox" checked={picked} disabled={isMe} onChange={onPick} aria-label={`تحديد ${u.fullName}`} className="h-4 w-4 shrink-0" />
         <Avatar name={u.fullName} size="md" />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2 font-semibold text-slate-900">
@@ -100,6 +159,9 @@ function UserRow({ u, teams, isMe }: { u: U; teams: Team[]; isMe: boolean }) {
               </span>
             ))}
             {names.length === 0 && <span className="text-amber-700">⚠ ليس عضوًا في أي فريق</span>}
+            <span suppressHydrationWarning className={u.lastLoginAt ? "text-slate-400" : "text-amber-700"}>
+              · {u.lastLoginAt ? `آخر دخول ${formatSince(new Date(u.lastLoginAt))}` : "لم يسجّل الدخول بعد"}
+            </span>
           </div>
         </div>
       </div>

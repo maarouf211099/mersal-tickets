@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Select, Textarea } from "@/components/ui/form";
 import { DetailsFields, type DetailsDefaults } from "@/components/tickets/details-fields";
-import { CLOSE_CATEGORIES } from "@/lib/workflow";
 import { displayName } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import {
@@ -26,6 +25,7 @@ type Props = {
   assignedToId: string | null;
   details: DetailsDefaults;
   isEmergency: boolean;
+  closeCategories: string[];
 };
 
 export function TicketActions(p: Props) {
@@ -84,7 +84,7 @@ export function TicketActions(p: Props) {
       )}
 
       {p.perms.canClose && (
-        <CloseCard pending={pending} busy={busy === "close"}
+        <CloseCard categories={p.closeCategories} pending={pending} busy={busy === "close"}
           onSubmit={(cat, t, clear) => run("close", "تم إغلاق التذكرة", () => closeTicket(p.ticketId, cat, t), clear)} />
       )}
 
@@ -210,8 +210,8 @@ function EditCard({ details, pending, busy, onSubmit }: {
   );
 }
 
-function CloseCard({ pending, busy, onSubmit }: {
-  pending: boolean; busy: boolean; onSubmit: (category: string, text: string, clear: () => void) => void;
+function CloseCard({ categories, pending, busy, onSubmit }: {
+  categories: string[]; pending: boolean; busy: boolean; onSubmit: (category: string, text: string, clear: () => void) => void;
 }) {
   const [cat, setCat] = useState("");
   const [text, setText] = useState("");
@@ -219,7 +219,7 @@ function CloseCard({ pending, busy, onSubmit }: {
     <Card title="إغلاق التذكرة" icon="✅">
       <Select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="سبب إغلاق التذكرة">
         <option value="">سبب إغلاق التذكرة (إلزامي)...</option>
-        {CLOSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        {categories.map((c) => <option key={c} value={c}>{c}</option>)}
       </Select>
       <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="سبب الغلق / تفاصيل (اختياري)" className="mt-2 min-h-[60px]" />
       <Button type="button" variant="secondary" className="mt-2 w-full" disabled={pending || !cat} loading={busy}

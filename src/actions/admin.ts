@@ -224,3 +224,62 @@ export async function saveTeam(teamId: string | null, input: unknown): Promise<R
     return done();
   } catch (e) { return fail(e); }
 }
+
+// ─── إعدادات النظام ───────────────────────────────────────
+const settingsSchema = z.object({
+  sla: z.object({
+    emergency: z.number().int().min(1).max(43200),
+    new_case: z.number().int().min(1).max(43200),
+    follow_up: z.number().int().min(1).max(43200),
+  }),
+  closeCategories: z.array(z.string().trim().min(2, "سبب الإغلاق قصير").max(80)).min(1, "لازم سبب إغلاق واحد على الأقل").max(40),
+  announcement: z.object({
+    text: z.string().trim().max(300, "الإعلان طويل"),
+    tone: z.enum(["info", "warning", "danger"]),
+    active: z.boolean(),
+  }),
+});
+
+export async function saveSettings(input: unknown): Promise<Result> {
+  try {
+    const me = await requireManager();
+    const parsed = settingsSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "خطأ" };
+    const d = parsed.data;
+    const cats = [...new Set(d.closeCategories)];
+    const ann = { ...d.announcement, active: d.announcement.active && !!d.announcement.text };
+    const rows: [string, object][] = [["sla", d.sla], ["closeCategories", cats], ["announcement", ann]];
+    await prisma.$transaction(rows.map(([key, value]) =>
+      prisma.setting.upsert({ where: { key }, update: { value }, create: { key, value } })));
+    await logSystem(me.id, "settings_updated", { sla: d.sla, closeCategories: cats.length, announcement: ann.active ? ann.text : null });
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (e) { return fail(e); }
+}
+
+// ─── إجراءات جماعية على المستخدمين ────────────────────────
+export async function bulkUsers(ids: string[], op: "activate" | "deactivate" | "reset" | "addTeam" | "removeTeam", arg?: string): Promise<Result & { count?: number }> {
+  try {
+    const me = await requireManager();
+    const targets = [...new Set(ids)].filter((id) => id !== me.id).slice(0, 500);
+    if (targets.length === 0) return { ok: false, error: "لم يتم اختيار مستخدمين (لا يمكن تطبيق الإجراء على حسابك)" };
+    let label = "";
+    if (op === "activate" || op === "deactivate") {
+      await prisma.user.updateMany({ where: { id: { in: targets } }, data: { isActive: op === "activate" } });
+      label = op === "activate" ? "تفعيل" : "إيقاف";
+    } else if (op === "reset") {
+      if (!arg || arg.length < 8) return { ok: false, error: "يجب ألا تقل كلمة المرور عن 8 أحرف" };
+      await prisma.user.updateMany({ where: { id: { in: targets } }, data: { passwordHash: await bcrypt.hash(arg, 10), mustChangePassword: true } });
+      label = "إعادة تعيين كلمة المرور";
+    } else {
+      const team = arg ? await prisma.team.findUnique({ where: { id: arg } }) : null;
+      if (!team) return { ok: false, error: "اختر الفريق" };
+      if (op === "addTeam") await prisma.teamMember.createMany({ data: targets.map((userId) => ({ userId, teamId: team.id })), skipDuplicates: true });
+      else await prisma.teamMember.deleteMany({ where: { userId: { in: targets }, teamId: team.id } });
+      label = `${op === "addTeam" ? "إضافة إلى" : "إزالة من"} ${team.name}`;
+    }
+    await logSystem(me.id, "users_bulk", { op: label, count: targets.length });
+    done();
+    return { ok: true, count: targets.length };
+  } catch (e) { return fail(e); }
+}

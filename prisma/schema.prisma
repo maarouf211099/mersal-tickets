@@ -97,6 +97,7 @@ model User {
   canExport    Boolean  @default(false)
   // بيتعمل true لما المدير يحدد كلمة المرور (إنشاء أو إعادة تعيين) — المستخدم لازم يغيّرها أول ما يدخل
   mustChangePassword Boolean @default(false)
+  lastLoginAt        DateTime?
   createdAt    DateTime @default(now())
 
   // صلاحيات فئات الموافقات (JSON: { medications: true, exceptions: false, ... })
@@ -299,6 +300,13 @@ model SystemEvent {
 
   @@index([createdAt])
   @@index([actorId, createdAt])
+}
+
+// إعدادات النظام اللي المدير بيغيّرها (مهلة الإنجاز، أسباب الإغلاق، الإعلان)
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
 }
 
 model TicketCounter {

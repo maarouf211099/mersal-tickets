@@ -15,6 +15,7 @@ import { canRequestAmbulance } from "@/lib/ambulance-access";
 import { STATUS_AR as AMB_STATUS, ambulanceEnabled, ambulanceLink, ambulanceStatus } from "@/lib/ambulance";
 import { describeEvent } from "@/lib/event-text";
 import { RichText } from "@/components/ui/rich-text";
+import { getSettings } from "@/lib/settings";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Avatar } from "@/components/ui/avatar";
 
@@ -66,6 +67,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
       where: { ticketId: ticket.id }, orderBy: { createdAt: "desc" }, include: { createdBy: { select: { fullName: true } } },
     });
   }
+  const settings = await getSettings();
   const canAmbulance = canRequestAmbulance(user) && ticket.status === "pending";
 
   const since = holders.reduce<Date | null>((a, h) => (!a || h.addedAt > a ? h.addedAt : a), null);
@@ -258,7 +260,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                         {formatDateTime(it.c.createdAt)}
                       </span>
                     </div>
-                    <CommentBody id={it.c.id} body={it.c.body} mine={it.c.authorId === user.id && user.role !== "viewer"}>
+                    <CommentBody id={it.c.id} body={it.c.body} mine={it.c.authorId === user.id && user.role !== "viewer"} canDelete={isManager(user)}>
                       <p className="text-sm leading-relaxed text-slate-800"><RichText text={it.c.body} /></p>
                     </CommentBody>
                   </div>
@@ -293,6 +295,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           assignable={assignable.map((p) => ({ id: p.id, fullName: p.fullName }))}
           assignedToId={ticket.assignedToId}
           isEmergency={ticket.type === "emergency"}
+          closeCategories={settings.closeCategories}
           details={{
             age: ticket.age, gender: ticket.gender, location: ticket.location,
             beneficiaryName: ticket.beneficiaryName, phone1: ticket.phone1, phone2: ticket.phone2,

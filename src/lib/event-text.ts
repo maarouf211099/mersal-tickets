@@ -50,6 +50,9 @@ export function describeSystemEvent(action: string, metadata: unknown): string {
     case "user_created": return `أنشأ المستخدم ${m.name} (@${m.username}) بدور ${ROLE_LABELS[String(m.role)] ?? m.role}`;
     case "user_updated": return `عدّل المستخدم ${m.name} (@${m.username})${changeText ? `: ${changeText}` : ""}`;
     case "password_reset": return `أعاد تعيين كلمة مرور ${m.name} (@${m.username})`;
+    case "settings_updated": return "عدّل إعدادات النظام (مهلة الإنجاز / أسباب الإغلاق / الإعلان)";
+    case "users_bulk": return `إجراء جماعي على ${m.count} مستخدم: ${m.op}`;
+    case "comment_removed": return `حذف تحديثًا كتبه ${m.author} في ${m.ticketNumber}`;
     case "users_imported": return `أضاف ${m.created} مستخدمًا دفعة واحدة`;
     case "team_created": return `أنشأ الفريق «${m.name}»`;
     case "team_updated": return `عدّل الفريق «${m.name}»${changeText ? `: ${changeText}` : ""}`;

@@ -12,8 +12,9 @@ export const SLA_MINUTES: Record<TicketType, number> = {
   emergency: 30,
 };
 
-export function slaDeadlineFor(type: TicketType, createdAt: Date): Date {
-  return new Date(createdAt.getTime() + SLA_MINUTES[type] * 60_000);
+// sla: المهل اللي المدير حددها في الإعدادات (لو مش متبعتة بنستخدم الافتراضي)
+export function slaDeadlineFor(type: TicketType, createdAt: Date, sla: Record<TicketType, number> = SLA_MINUTES): Date {
+  return new Date(createdAt.getTime() + sla[type] * 60_000);
 }
 
 // تيكت طوارئ اتحولت للتسجيل والاتصال الخارجي → مهلتها بتبقى 48 ساعة من وقت التحويل
@@ -28,9 +29,11 @@ export function slaDeadlineAfterTransfer(type: TicketType, targetCode: string | 
 
 // استلام تيكت طوارئ: المهلة بتبدأ من جديد من لحظة الاستلام
 // (48 ساعة لو عند التسجيل والاتصال الخارجي، غير كده 30 دقيقة)
-export function slaDeadlineAfterReceive(type: TicketType, holderCodes: (string | null)[], at: Date): Date | null {
+export function slaDeadlineAfterReceive(
+  type: TicketType, holderCodes: (string | null)[], at: Date, sla: Record<TicketType, number> = SLA_MINUTES,
+): Date | null {
   if (type !== "emergency") return null;
-  const minutes = holderCodes.includes(TEAM.REGISTRATION) ? OUTBOUND_EMERGENCY_SLA_MINUTES : SLA_MINUTES.emergency;
+  const minutes = holderCodes.includes(TEAM.REGISTRATION) ? OUTBOUND_EMERGENCY_SLA_MINUTES : sla.emergency;
   return new Date(at.getTime() + minutes * 60_000);
 }
 
@@ -50,9 +53,14 @@ export const CLOSE_CATEGORIES = [
   "تم استلام الحالة",
 ];
 
-export function slaLabel(type: TicketType): string {
-  const m = SLA_MINUTES[type];
-  return m < 60 ? `${m} دقيقة` : `${m / 60} ساعة`;
+export function minutesLabel(m: number): string {
+  if (m < 60) return `${m} دقيقة`;
+  if (m % 1440 === 0 && m > 4320) return `${m / 1440} يوم`;
+  return m % 60 === 0 ? `${m / 60} ساعة` : `${Math.floor(m / 60)} ساعة و${m % 60} دقيقة`;
+}
+
+export function slaLabel(type: TicketType, sla: Record<TicketType, number> = SLA_MINUTES): string {
+  return minutesLabel(sla[type]);
 }
 
 export type SlaState = "within" | "warning" | "breached" | "met";

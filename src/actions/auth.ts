@@ -32,6 +32,7 @@ export async function login(_prev: { error?: string } | undefined, form: FormDat
   }
   attempts.delete(key);
   await startSession(user.id);
+  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   await logSystem(user.id, "login");
   const safe = /^\/(?![\/\\])/.test(next) && !next.includes("\\");
   redirect(safe ? next : "/dashboard");

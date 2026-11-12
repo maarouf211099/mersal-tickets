@@ -16,9 +16,10 @@ const TYPES: { key: TicketType; icon: string; on: string; check: string; hint: s
   { key: "follow_up", icon: "📋", on: "border-brand-400 bg-brand-50 shadow-brand-500/10", check: "bg-brand-500", hint: "متابعة حالة مسجَّلة من قبل" },
 ];
 
-export function NewTicketForm({ targets, defaultSource }: {
+export function NewTicketForm({ targets, defaultSource, sla }: {
   targets: { id: string; name: string; color: string }[];
   defaultSource: string;
+  sla: Record<TicketType, number>;
 }) {
   const router = useRouter();
   const [type, setType] = useState<TicketType | "">("");
@@ -58,7 +59,7 @@ export function NewTicketForm({ targets, defaultSource }: {
               <div className="mt-2 font-bold text-slate-900">{TYPE_LABELS[t.key]}</div>
               <div className="text-xs text-slate-500">{t.hint}</div>
               <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200">
-                ⏱ مهلة الإنجاز: {slaLabel(t.key)}
+                ⏱ مهلة الإنجاز: {slaLabel(t.key, sla)}
               </div>
             </button>
           ))}
@@ -99,7 +100,7 @@ export function NewTicketForm({ targets, defaultSource }: {
         <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
           {type ? (
             <span className="animate-fade inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
-              {TYPES.find((t) => t.key === type)?.icon} {TYPE_LABELS[type]} · {slaLabel(type)}
+              {TYPES.find((t) => t.key === type)?.icon} {TYPE_LABELS[type]} · {slaLabel(type, sla)}
             </span>
           ) : <span className="text-slate-400">اختر نوع الحالة أولًا</span>}
           {team && (

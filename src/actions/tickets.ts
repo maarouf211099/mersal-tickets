@@ -7,12 +7,13 @@ import { prisma } from "@/lib/prisma";
 import { requireUser, type SessionUser } from "@/lib/auth";
 import { isManager, ticketPermissions, ticketScope } from "@/lib/access";
 import { logSystem } from "@/lib/audit";
+import { getSettings } from "@/lib/settings";
 import { nextTicketNumber } from "@/lib/ticket-number";
 import { notify, teamMemberIds } from "@/lib/notify";
 import { pickFiles, removeStoredFile, saveFile, validateFiles } from "@/lib/storage";
 import {
   EGYPTIAN, TEAM, TRIAGE_LABELS, identityError, normalizeDigits, parseMentions,
-  CLOSE_CATEGORIES, GENDERS, OUTBOUND_EMERGENCY_SLA_MINUTES, researchOutcome, slaDeadlineAfterReceive, slaDeadlineAfterTransfer,
+  GENDERS, OUTBOUND_EMERGENCY_SLA_MINUTES, researchOutcome, slaDeadlineAfterReceive, slaDeadlineAfterTransfer,
   slaDeadlineFor, transferTargets, transferTargetsForTicket, triageHolders,
 } from "@/lib/workflow";
 
@@ -157,7 +158,7 @@ export async function createTicket(form: FormData): Promise<{ ok: true; id: stri
         ...details.data,
         createdById: user.id,
         createdAt,
-        slaDeadline: slaDeadlineFor(meta.data.type, createdAt),
+        slaDeadline: slaDeadlineFor(meta.data.type, createdAt, (await getSettings()).sla),
         teams: { create: { teamId: target.id, access: "holder" } },
         attachments: { create: saved.map((f) => ({ ...f, uploadedById: user.id })) },
         events: {
@@ -249,7 +250,10 @@ export async function editComment(commentId: string, body: string): Promise<Resu
 export async function deleteComment(commentId: string): Promise<Result> {
   return guard(async () => {
     const user = await requireUser();
-    const c = await loadOwnComment(user, commentId);
+    // المدير يقدر يحذف تحديث أي حد (بيتسجل في السجل العام)، غير كده صاحب التحديث بس
+    const c = isManager(user)
+      ? await prisma.ticketComment.findUnique({ where: { id: commentId } }).then((x) => { if (!x) throw new Error("التحديث غير موجود"); return x; })
+      : await loadOwnComment(user, commentId);
     await prisma.$transaction([
       prisma.ticketComment.delete({ where: { id: c.id } }),
       prisma.ticketEvent.create({
@@ -463,7 +467,7 @@ export async function closeTicket(ticketId: string, category: string, reason: st
     const user = await requireUser();
     const { ticket, perms } = await loadWithPerms(user, ticketId);
     if (!perms.canClose) return { ok: false, error: "غير مصرح" };
-    if (!CLOSE_CATEGORIES.includes(category)) return { ok: false, error: "يُرجى اختيار سبب إغلاق التذكرة من القائمة" };
+    if (!(await getSettings()).closeCategories.includes(category)) return { ok: false, error: "يُرجى اختيار سبب إغلاق التذكرة من القائمة" };
     const text = reason.trim();
     if (text.length > 2000) return { ok: false, error: "النص طويل جداً" };
     await prisma.ticket.update({
@@ -516,7 +520,7 @@ export async function receiveTicket(ticketId: string): Promise<Result> {
     if (ticket.receivedAt) return { ok: false, error: "تم استلام التذكرة بالفعل" };
     const now = new Date();
     const holderCodes = ticket.teams.filter((t) => t.access === "holder").map((t) => t.team.code);
-    const deadline = slaDeadlineAfterReceive(ticket.type, holderCodes, now);
+    const deadline = slaDeadlineAfterReceive(ticket.type, holderCodes, now, (await getSettings()).sla);
     await prisma.ticket.update({
       where: { id: ticketId },
       data: {

@@ -27,6 +27,7 @@ export default async function UsersPage() {
           id: u.id, username: u.username, fullName: u.fullName, role: u.role, isActive: u.isActive,
           canReopen: u.canReopen, canExport: u.canExport, teamIds: u.teams.map((t) => t.teamId),
           approvalPerms: (u.approvalPerms ?? {}) as Record<string, boolean>,
+          lastLoginAt: u.lastLoginAt?.toISOString() ?? null, mustChangePassword: u.mustChangePassword,
         }))}
       />
     </div>

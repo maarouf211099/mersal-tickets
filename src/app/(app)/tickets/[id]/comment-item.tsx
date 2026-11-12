@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/form";
 import { toast } from "@/components/ui/toast";
 
 // نص التحديث + (لصاحبه بس) تعديل وحذف
-export function CommentBody({ id, body, mine, children }: {
-  id: string; body: string; mine: boolean; children: React.ReactNode;
+export function CommentBody({ id, body, mine, canDelete, children }: {
+  id: string; body: string; mine: boolean; canDelete?: boolean; children: React.ReactNode;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -37,10 +37,10 @@ export function CommentBody({ id, body, mine, children }: {
   return (
     <div className="group/c">
       {children}
-      {mine && (
+      {(mine || canDelete) && (
         <div className="no-print mt-2 flex gap-1 opacity-60 transition-opacity group-hover/c:opacity-100">
-          <button type="button" onClick={() => setEditing(true)}
-            className="rounded-md px-2 py-0.5 text-xs text-slate-500 transition hover:bg-slate-100 hover:text-brand-700">✏️ تعديل</button>
+          {mine && <button type="button" onClick={() => setEditing(true)}
+            className="rounded-md px-2 py-0.5 text-xs text-slate-500 transition hover:bg-slate-100 hover:text-brand-700">✏️ تعديل</button>}
           <button type="button" disabled={pending}
             onClick={() => {
               if (!confirm("هل تريد حذف هذا التحديث؟")) return;
