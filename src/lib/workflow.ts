@@ -204,6 +204,19 @@ export function identityError(nationality: string, nationalId: string, _unhcrNum
   return null;
 }
 
+// فريق الأبحاث: والتذكرة عنده، يقدر يرجّعها لطبيب الخط الساخن أو يحوّلها لقرارات مرسال بس
+export const RESEARCH_TRANSFER_CODES: string[] = [TEAM.HOTLINE_DOCTOR, TEAM.MERSAL_DECISIONS];
+
+export function transferTargetsForTicket<T extends TeamLite>(
+  teams: T[], actorTeamIds: string[], isManager: boolean, holderIds: string[],
+): T[] {
+  const research = teams.find((t) => t.code === TEAM.RESEARCH);
+  if (!isManager && research && holderIds.includes(research.id) && actorTeamIds.includes(research.id)) {
+    return teams.filter((t) => t.isActive && !holderIds.includes(t.id) && !!t.code && RESEARCH_TRANSFER_CODES.includes(t.code));
+  }
+  return transferTargets(teams, actorTeamIds, isManager, holderIds);
+}
+
 export function parseMentions(body: string): string[] {
   const out = new Set<string>();
   for (const m of body.matchAll(/(^|[^a-zA-Z0-9._-])@([a-zA-Z0-9._-]{2,})/g)) {

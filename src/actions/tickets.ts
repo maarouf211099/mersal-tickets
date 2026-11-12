@@ -13,7 +13,7 @@ import { pickFiles, removeStoredFile, saveFile, validateFiles } from "@/lib/stor
 import {
   EGYPTIAN, TEAM, TRIAGE_LABELS, identityError, normalizeDigits, parseMentions,
   CLOSE_CATEGORIES, GENDERS, OUTBOUND_EMERGENCY_SLA_MINUTES, researchOutcome, slaDeadlineAfterReceive, slaDeadlineAfterTransfer,
-  slaDeadlineFor, transferTargets, triageHolders,
+  slaDeadlineFor, transferTargets, transferTargetsForTicket, triageHolders,
 } from "@/lib/workflow";
 
 type Result = { ok: true; warning?: string } | { ok: false; error: string };
@@ -307,7 +307,7 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
 
     const holders = ticket.teams.filter((t) => t.access === "holder");
     const allTeams = await prisma.team.findMany();
-    const target = transferTargets(allTeams, user.teamIds, isManager(user), holders.map((h) => h.teamId))
+    const target = transferTargetsForTicket(allTeams, user.teamIds, isManager(user), holders.map((h) => h.teamId))
       .find((t) => t.id === targetTeamId);
     if (!target) return { ok: false, error: "لا يُسمح لك بالتحويل إلى هذا الفريق" };
 
@@ -319,6 +319,12 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
     const keepObserving = target.transferOnlyFromId && fromIds.includes(target.transferOnlyFromId)
       ? [target.transferOnlyFromId] : [];
     const newDeadline = ticket.status === "pending" ? slaDeadlineAfterTransfer(ticket.type, target.code, new Date()) : null;
+    // الأبحاث سلّمت التذكرة من غير قرار: قرارها المعلّق بيتلغي، ولو رجعت لطبيب الخط الساخن يصنّفها من جديد
+    const researchLeaves = from.some((h) => h.team.code === TEAM.RESEARCH);
+    const medicalReset = {
+      ...(researchLeaves && ticket.researchDecision === "pending" && { researchDecision: null }),
+      ...(target.code === TEAM.HOTLINE_DOCTOR && { triageLevel: null, researchDecision: null }),
+    };
 
     await prisma.$transaction([
       prisma.ticketTeam.deleteMany({ where: { ticketId, teamId: { in: fromIds.filter((id) => !keepObserving.includes(id)) } } }),
@@ -331,7 +337,7 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
       prisma.ticket.update({
         where: { id: ticketId },
         data: {
-          assignedToId: null, receivedAt: null, receivedById: null,
+          assignedToId: null, receivedAt: null, receivedById: null, ...medicalReset,
           ...(newDeadline && { slaDeadline: newDeadline, slaBreachNotifiedAt: null }),
         },
       }),

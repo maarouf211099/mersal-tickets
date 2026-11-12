@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  slaDeadlineFor, slaState, transferTargets, triageHolders, researchOutcome,
+  slaDeadlineFor, slaState, transferTargets, transferTargetsForTicket, triageHolders, researchOutcome,
   identityError, normalizeDigits, parseMentions, slaDeadlineAfterTransfer, slaDeadlineAfterReceive, TEAM, EGYPTIAN, type TeamLite,
 } from "./workflow.ts";
 
@@ -41,6 +41,19 @@ test("hotline doctor is only offered to the emergency hotline team", () => {
   assert.deepEqual(ids(transferTargets(teams, ["CALL"], false)), ["ALEX", "EH", "REG"]);
   assert.deepEqual(ids(transferTargets(teams, ["EH"], false, ["EH"])), ["ALEX", "REG", "HD"]);
   assert.ok(ids(transferTargets(teams, [], true)).includes("HD"));
+});
+
+test("research team holding a ticket can only send it back to hotline doctor or to Mersal decisions", () => {
+  const real = [
+    team("r", { code: TEAM.RESEARCH }), team("hd", { code: TEAM.HOTLINE_DOCTOR, transferOnlyFromId: "eh" }),
+    team("dec", { code: TEAM.MERSAL_DECISIONS, isReceiver: true }), team("eh", { code: TEAM.EMERGENCY_HOTLINE, isReceiver: true }),
+    team("reg", { code: TEAM.REGISTRATION, isReceiver: true }),
+  ];
+  assert.deepEqual(ids(transferTargetsForTicket(real, ["r"], false, ["r"])).sort(), ["dec", "hd"]);
+  // مش من الأبحاث، أو التذكرة مش عند الأبحاث، أو مدير → القواعد العادية
+  assert.deepEqual(ids(transferTargetsForTicket(real, ["reg"], false, ["r"])).sort(), ["dec", "eh", "reg"]);
+  assert.deepEqual(ids(transferTargetsForTicket(real, ["r"], false, ["eh"])).sort(), ["dec", "reg"]);
+  assert.ok(ids(transferTargetsForTicket(real, ["r"], true, ["r"])).includes("reg"));
 });
 
 test("triage routing", () => {

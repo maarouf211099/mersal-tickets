@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTicketForView } from "@/actions/tickets";
 import { isManager } from "@/lib/access";
-import { EGYPTIAN, SOURCE_LABELS, TRIAGE_LABELS, TYPE_LABELS, slaState, transferTargets } from "@/lib/workflow";
+import { EGYPTIAN, SOURCE_LABELS, TRIAGE_LABELS, TYPE_LABELS, slaState, transferTargetsForTicket } from "@/lib/workflow";
 import { SlaBadge, StatusBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
 import { displayName, formatBytes, formatDateTime, formatSince } from "@/lib/utils";
@@ -38,7 +38,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
       orderBy: { fullName: "asc" },
     }),
   ]);
-  const targets = transferTargets(allTeams, user.teamIds, isManager(user), holders.map((h) => h.teamId));
+  const targets = transferTargetsForTicket(allTeams, user.teamIds, isManager(user), holders.map((h) => h.teamId));
   const holderIds = new Set(holders.map((h) => h.teamId));
   const assignable = people.filter((p) => p.role !== "viewer" && p.teams.some((t) => holderIds.has(t.teamId)));
 
