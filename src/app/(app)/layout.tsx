@@ -30,13 +30,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="app-bg min-h-screen">
       <Suspense fallback={null}><RouteProgress /></Suspense>
       <Nav user={{ name: user.name, role: user.role, teams: teams.map((t) => t.name) }} initialUnread={unread} />
-      <div className="xl:pr-64">
+      <div>
         {settings.announcement.active && settings.announcement.text && (
           <div className={`animate-expand border-b px-4 py-2.5 text-center text-sm font-medium no-print ${ANNOUNCE_TONE[settings.announcement.tone]}`}>
             📢 {settings.announcement.text}
           </div>
         )}
-        <main className="mx-auto max-w-[1400px] px-4 pb-24 pt-6 sm:px-6 lg:pb-10 xl:px-8">{children}</main>
+        <main className="mx-auto max-w-[1400px] px-4 pb-24 pt-6 sm:px-6 lg:pb-10">{children}</main>
       </div>
       <ScrollTop />
       <Toaster />

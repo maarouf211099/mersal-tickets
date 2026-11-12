@@ -103,73 +103,28 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
 
   return (
     <>
-      {/* القائمة الجانبية — الشاشات الكبيرة */}
-      <aside className="fixed inset-y-0 right-0 z-50 hidden w-64 flex-col overflow-hidden bg-gradient-to-b from-brand-900 via-[#0f5f59] to-brand-900 text-white shadow-2xl shadow-brand-900/30 xl:flex no-print">
-        <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 animate-float rounded-full bg-white/5" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 animate-float-slow rounded-full bg-accent-400/10" />
-        <Link href="/dashboard" className="group relative flex items-center gap-3 px-5 pb-4 pt-5">
-          <span className="transition-transform duration-300 group-hover:rotate-[-6deg] group-hover:scale-105"><Logo size={44} showText={false} /></span>
-          <span>
-            <span className="block text-2xl font-extrabold leading-tight text-accent-400">مرسال</span>
-            <span className="block text-[9px] font-bold uppercase tracking-[0.28em] text-brand-200">نظام التذاكر</span>
-          </span>
-        </Link>
-        {user.role !== "viewer" && (
-          <div className="relative px-4 pb-3">
-            <Link href="/tickets/new" className="group flex items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-sm font-bold text-brand-800 shadow-lg shadow-black/10 transition hover:-translate-y-0.5 hover:bg-accent-50 active:scale-[0.98]">
-              <PlusIcon className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" /> تذكرة جديدة
-            </Link>
-          </div>
-        )}
-        <div className="relative flex-1 overflow-y-auto px-3 pb-3 [scrollbar-width:thin]">
-          <SideLabel>القائمة</SideLabel>
-          {[...primaryNav, ...utilityNav].map((it) => <SideLink key={it.href} {...it} active={isActive(it.href)} />)}
-          {adminNav.length > 0 && (
-            <>
-              <SideLabel>الإدارة</SideLabel>
-              {adminNav.map((it) => <SideLink key={it.href} {...it} active={isActive(it.href)} />)}
-            </>
-          )}
-        </div>
-        <div className="relative border-t border-white/10 p-3">
-          <Link href="/account" className="flex items-center gap-3 rounded-xl p-2 transition hover:bg-white/10">
-            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-sm font-bold text-white ring-2 ring-white/30">
-              {user.name.charAt(0)}
-              <span className="absolute -bottom-0.5 -left-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-brand-900" />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold">{user.name}</span>
-              <span className="block truncate text-[11px] text-brand-200">{roleAr}{user.teams.length > 0 && ` · ${user.teams.join("، ")}`}</span>
-            </span>
-          </Link>
-          <button onClick={() => logout()} className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-brand-100/80 transition hover:bg-white/10 hover:text-white">
-            <LogoutIcon className="h-4 w-4" /> تسجيل الخروج
-          </button>
-        </div>
-      </aside>
-
-      <nav className={cn("sticky top-0 z-40 border-b backdrop-blur-md transition-all duration-300 xl:mr-64",
+      <nav className={cn("sticky top-0 z-40 border-b backdrop-blur-md transition-all duration-300",
         scrolled ? "border-slate-200 bg-white/85 shadow-md shadow-slate-900/5" : "border-slate-200/80 bg-white/95 shadow-sm")}>
         <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 sm:px-6 h-16">
           {/* Logo */}
-          <Link href="/dashboard" className="shrink-0 group xl:hidden">
+          <Link href="/dashboard" className="shrink-0 group">
             <div className="transition-transform duration-200 group-hover:scale-105">
               <Logo />
             </div>
           </Link>
 
           {/* Primary Navigation */}
-          <div className="hidden lg:flex xl:hidden items-center gap-1 mr-2">
+          <div className="hidden lg:flex items-center gap-1 mr-2">
             {primaryNav.map((it) => (
               <NavLink key={it.href} {...it} active={isActive(it.href)} />
             ))}
           </div>
 
           {/* Divider */}
-          <div className="hidden lg:block xl:hidden h-6 w-px bg-slate-200" />
+          <div className="hidden lg:block h-6 w-px bg-slate-200" />
 
           {/* Utility Navigation */}
-          <div className="hidden lg:flex xl:hidden items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1">
             {utilityNav.map((it) => (
               <NavLink key={it.href} {...it} active={isActive(it.href)} />
             ))}
@@ -178,8 +133,8 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
           {/* Admin Section */}
           {adminNav.length > 0 && (
             <>
-              <div className="hidden lg:block xl:hidden h-6 w-px bg-slate-200" />
-              <div className="hidden lg:flex xl:hidden items-center gap-1">
+              <div className="hidden lg:block h-6 w-px bg-slate-200" />
+              <div className="hidden lg:flex items-center gap-1">
                 {adminNav.map((it) => (
                   <NavLink key={it.href} {...it} active={isActive(it.href)} />
                 ))}
@@ -191,17 +146,14 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
           <div className="flex-1" />
 
           {/* Quick Action Buttons - "جديد" */}
-          <div className="hidden xl:flex items-center gap-2">
+          <div className="hidden min-[1700px]:flex items-center gap-2">
             {user.role !== "viewer" && <QuickAdd href="/tickets/new" label="تذكرة" color="teal" />}
-            <QuickAdd href="/approvals/new" label="موافقة" color="gold" />
           </div>
 
           {/* Search — بيفتح البحث السريع (Ctrl+K) */}
           <button type="button" onClick={openQuickSearch} title="بحث (Ctrl+K)" aria-label="بحث"
-            className="group flex h-9 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50/70 px-2.5 text-sm text-slate-400 transition-all hover:border-brand-300 hover:bg-white hover:text-brand-700 hover:shadow-sm xl:order-first xl:h-10 xl:w-80 xl:px-4">
+            className="group flex h-9 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50/70 px-2.5 text-sm text-slate-400 transition-all hover:border-brand-300 hover:bg-white hover:text-brand-700 hover:shadow-sm">
             <SearchIcon className="h-4 w-4 shrink-0" />
-            <span className="hidden flex-1 truncate text-right xl:block">ابحث بالاسم أو رقم التذكرة…</span>
-            <kbd className="hidden rounded border border-slate-200 bg-white px-1.5 text-[10px] font-medium text-slate-400 xl:block">Ctrl K</kbd>
           </button>
 
           {/* User Menu */}
@@ -343,7 +295,7 @@ function NavLink({ href, label, icon: Icon, active, badge }: {
     >
       <Icon className={cn("h-4 w-4 transition-transform duration-200", active ? "" : "group-hover:scale-110")} />
       {/* على الشاشات المتوسطة الأيقونة بس — الاسم بيظهر في التلميح */}
-      <span className="hidden xl:inline">{label}</span>
+      <span className="hidden min-[1500px]:inline">{label}</span>
       {typeof badge === "number" && badge > 0 && (
         <span className="ml-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white animate-pulse-scale">
           {badge > 99 ? "99+" : badge}
@@ -355,27 +307,6 @@ function NavLink({ href, label, icon: Icon, active, badge }: {
       )}
       {active && (
         <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-brand-600 rounded-full" />
-      )}
-    </Link>
-  );
-}
-
-function SideLabel({ children }: { children: React.ReactNode }) {
-  return <div className="px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-brand-200/70">{children}</div>;
-}
-
-function SideLink({ href, label, icon: Icon, active, badge }: {
-  href: string; label: string; icon: React.ComponentType<{ className?: string }>; active: boolean; badge?: number;
-}) {
-  return (
-    <Link href={href} aria-current={active ? "page" : undefined}
-      className={cn("group relative mb-0.5 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-        active ? "bg-white/15 text-white shadow-inner shadow-black/10" : "text-brand-100/85 hover:bg-white/10 hover:pr-4 hover:text-white")}>
-      {active && <span className="absolute right-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-l-full bg-accent-400" />}
-      <Icon className={cn("h-[18px] w-[18px] shrink-0 transition-transform duration-200", active ? "text-accent-300" : "group-hover:scale-110")} />
-      <span className="flex-1">{label}</span>
-      {typeof badge === "number" && badge > 0 && (
-        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white animate-pulse-scale">{badge > 99 ? "99+" : badge}</span>
       )}
     </Link>
   );
