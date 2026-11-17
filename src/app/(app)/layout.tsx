@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { RouteProgress, ScrollTop } from "@/components/layout/route-progress";
 import { ForcePasswordChange } from "@/components/account/force-password";
 import { getSettings } from "@/lib/settings";
+import FeedbackPrompt from "@/components/feedback-prompt";
 
 const ANNOUNCE_TONE = {
   info: "border-brand-200 bg-brand-50 text-brand-900",
@@ -40,6 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       <ScrollTop />
       <Toaster />
+      <FeedbackPrompt system="tickets" name="نظام التذاكر" user={String(user.id)} />
     </div>
   );
 }
