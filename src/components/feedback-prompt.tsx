@@ -3,14 +3,47 @@
 import { useEffect } from "react";
 
 // رسالة تقييم النظام: بتظهر مرة واحدة لكل مستخدم بعد الدخول (الكود في public/mersal-feedback.js).
-// لو FORM_URL فاضي الرسالة مش بتظهر. بعد UNTIL مش بتظهر خالص.
-const FORM_URL = "";
+// الردود بتتسجل في جدول Feedback عن طريق /api/feedback. بعد UNTIL الرسالة مش بتظهر (النتايج تفضل متاحة).
 const UNTIL = "2026-11-30";
 
-export default function FeedbackPrompt({ system, name, user }: { system: string; name: string; user?: string }) {
+async function api(url: string, init?: RequestInit) {
+  const res = await fetch(url, {
+    ...init,
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { Accept: "application/json", ...(init?.body ? { "Content-Type": "application/json" } : {}) },
+  });
+  let data: unknown = null;
+  try {
+    data = await res.json();
+  } catch {}
+  if (!res.ok) {
+    const msg = (data as { error?: unknown } | null)?.error;
+    throw new Error(typeof msg === "string" && msg ? msg : "حصلت مشكلة في الاتصال — حاول تاني.");
+  }
+  return data;
+}
+
+export default function FeedbackPrompt({
+  system, name, user, canViewResults,
+}: { system: string; name: string; user: string; canViewResults: boolean }) {
   useEffect(() => {
-    (window as unknown as { MERSAL_FEEDBACK: unknown }).MERSAL_FEEDBACK = {
-      system, name, formUrl: FORM_URL, until: UNTIL, user: () => user || "",
+    const w = window as unknown as { MERSAL_FEEDBACK?: Record<string, unknown> };
+    let active = true;
+    w.MERSAL_FEEDBACK = {
+      system,
+      name,
+      until: UNTIL,
+      ready: () => active && !!user,
+      user: () => user,
+      submit: (data: unknown) => api("/api/feedback", { method: "POST", body: JSON.stringify(data) }),
+      mine: async () => !!((await api("/api/feedback/mine")) as { submitted?: boolean } | null)?.submitted,
+      // مجرد إظهار للزرار — السيرفر هو اللي بيتأكد فعلًا (GET /api/feedback)
+      canViewResults: () => active && canViewResults,
+      results: async () => {
+        const rows = await api("/api/feedback");
+        return Array.isArray(rows) ? rows : [];
+      },
     };
     if (!document.getElementById("mfb-js")) {
       const s = document.createElement("script");
@@ -19,6 +52,9 @@ export default function FeedbackPrompt({ system, name, user }: { system: string;
       s.defer = true;
       document.body.appendChild(s);
     }
-  }, [system, name, user]);
+    return () => {
+      active = false;
+    };
+  }, [system, name, user, canViewResults]);
   return null;
 }
