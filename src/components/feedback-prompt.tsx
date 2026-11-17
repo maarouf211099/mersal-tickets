@@ -24,9 +24,8 @@ async function api(url: string, init?: RequestInit) {
   return data;
 }
 
-export default function FeedbackPrompt({
-  system, name, user, canViewResults,
-}: { system: string; name: string; user: string; canViewResults: boolean }) {
+// النتايج مش بتتعرض هنا (مفيش زرار 📊) — بتتجمع من كل الأنظمة في صفحة واحدة جوه سيستم الحالات.
+export default function FeedbackPrompt({ system, name, user }: { system: string; name: string; user: string }) {
   useEffect(() => {
     const w = window as unknown as { MERSAL_FEEDBACK?: Record<string, unknown> };
     let active = true;
@@ -38,12 +37,6 @@ export default function FeedbackPrompt({
       user: () => user,
       submit: (data: unknown) => api("/api/feedback", { method: "POST", body: JSON.stringify(data) }),
       mine: async () => !!((await api("/api/feedback/mine")) as { submitted?: boolean } | null)?.submitted,
-      // مجرد إظهار للزرار — السيرفر هو اللي بيتأكد فعلًا (GET /api/feedback)
-      canViewResults: () => active && canViewResults,
-      results: async () => {
-        const rows = await api("/api/feedback");
-        return Array.isArray(rows) ? rows : [];
-      },
     };
     if (!document.getElementById("mfb-js")) {
       const s = document.createElement("script");
@@ -55,6 +48,6 @@ export default function FeedbackPrompt({
     return () => {
       active = false;
     };
-  }, [system, name, user, canViewResults]);
+  }, [system, name, user]);
   return null;
 }

@@ -3,6 +3,10 @@
 // حملة التقييم الحالية — لازم تطابق CAMPAIGN في public/mersal-feedback.js
 export const FEEDBACK_CAMPAIGN = "eval-2026-11";
 
+// مفتاح النظام واسمه في رسالة التقييم وفي ملف النتايج المشترك (feedback-snapshot.ts)
+export const FEEDBACK_SYSTEM = "tickets";
+export const FEEDBACK_SYSTEM_NAME = "نظام التذاكر";
+
 // مين يشوف نتايج التقييم:
 //   - أي مستخدم بدور "manager" (مدير النظام — أعلى دور في UserRole، زي isAdmin في permissions.ts)
 //   - بالإضافة لمستخدم واحد محدد حتى لو مش مدير: FEEDBACK_RESULTS_USER في .env (الافتراضي mahmoud.maarouf)
