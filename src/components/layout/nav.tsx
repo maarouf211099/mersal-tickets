@@ -85,6 +85,7 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
     { href: "/dashboard", label: "الرئيسية", icon: HomeIcon },
     { href: "/tickets",   label: "التذاكر",  icon: TicketIcon },
     { href: "/approvals", label: "الموافقات", icon: DocIcon },
+    { href: "/devices",   label: "الأجهزة",  icon: HeartIcon },
   ];
   const utilityNav = [
     { href: "/notifications", label: "الإشعارات", icon: BellIcon, badge: unread },
@@ -388,4 +389,7 @@ function SearchIcon(p: { className?: string }) {
 }
 function PlusIcon(p: { className?: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+}
+function HeartIcon(p: { className?: string }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/><path d="M8 12h2l1.5-3 2 5 1.5-2h1.5"/></svg>;
 }

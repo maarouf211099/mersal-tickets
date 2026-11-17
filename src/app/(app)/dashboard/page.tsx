@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ticketScope } from "@/lib/access";
-import { TYPE_LABELS, slaLabel, slaState, type TicketType } from "@/lib/workflow";
+import { TYPE_LABELS, hasSla, slaLabel, slaState, type TicketType } from "@/lib/workflow";
 import { SlaBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
 import { CountUp } from "@/components/ui/count-up";
@@ -131,7 +131,7 @@ export default async function DashboardPage() {
                     <td>
                       <div className="flex flex-col items-start gap-1">
                         <SlaBadge state={slaState(t, now)} />
-                        <SlaCountdown deadline={t.slaDeadline.toISOString()} />
+                        {hasSla(t) && <SlaCountdown deadline={t.slaDeadline.toISOString()} />}
                       </div>
                     </td>
                   </tr>
@@ -178,6 +178,7 @@ const TYPE_STYLE: Record<TicketType, { icon: string; tile: string; bar: string; 
   emergency: { icon: "🚨", tile: "bg-red-50", bar: "bg-red-500", border: "border-t-red-500" },
   new_case: { icon: "🆕", tile: "bg-violet-50", bar: "bg-violet-500", border: "border-t-violet-500" },
   follow_up: { icon: "📋", tile: "bg-brand-50", bar: "bg-brand-500", border: "border-t-brand-500" },
+  device_request: { icon: "🩺", tile: "bg-sky-50", bar: "bg-sky-500", border: "border-t-sky-500" },
 };
 
 const TONES = {

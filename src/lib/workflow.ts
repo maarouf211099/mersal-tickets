@@ -1,6 +1,6 @@
 // منطق الـ workflow — دوال صافية من غير داتابيز عشان تتختبر لوحدها (workflow.test.ts)
 
-export type TicketType = "new_case" | "follow_up" | "emergency";
+export type TicketType = "new_case" | "follow_up" | "emergency" | "device_request";
 export type TicketSource = "call_center" | "social_media" | "reception" | "clinics";
 export type TriageLevel = "emergency" | "urgent";
 export type ResearchDecision = "accepted" | "rejected";
@@ -10,10 +10,16 @@ export const SLA_MINUTES: Record<TicketType, number> = {
   new_case: 48 * 60,
   follow_up: 72 * 60,
   emergency: 30,
+  device_request: 0, // من غير مهلة
 };
+
+// تذاكر من غير مهلة (طلب جهاز طبي) بتاخد موعد بعيد جدًا بدل null — كده باقي الكود ما يتغيرش
+export const NO_SLA_DEADLINE = new Date("2999-12-31T00:00:00Z");
+export const hasSla = (t: { slaDeadline: Date }) => t.slaDeadline.getTime() < NO_SLA_DEADLINE.getTime() - 86_400_000;
 
 // sla: المهل اللي المدير حددها في الإعدادات (لو مش متبعتة بنستخدم الافتراضي)
 export function slaDeadlineFor(type: TicketType, createdAt: Date, sla: Record<TicketType, number> = SLA_MINUTES): Date {
+  if (type === "device_request" || !sla[type]) return NO_SLA_DEADLINE;
   return new Date(createdAt.getTime() + sla[type] * 60_000);
 }
 
@@ -60,10 +66,11 @@ export function minutesLabel(m: number): string {
 }
 
 export function slaLabel(type: TicketType, sla: Record<TicketType, number> = SLA_MINUTES): string {
+  if (type === "device_request" || !sla[type]) return "بدون مهلة";
   return minutesLabel(sla[type]);
 }
 
-export type SlaState = "within" | "warning" | "breached" | "met";
+export type SlaState = "within" | "warning" | "breached" | "met" | "none";
 
 // التيكت المقفولة: met لو اتقفلت قبل الموعد، breached لو بعده.
 // المفتوحة: warning بعد 80% من الوقت، breached بعد الموعد.
@@ -71,6 +78,7 @@ export function slaState(
   t: { createdAt: Date; slaDeadline: Date; closedAt?: Date | null },
   now: Date = new Date(),
 ): SlaState {
+  if (!hasSla(t)) return "none";
   if (t.closedAt) return t.closedAt <= t.slaDeadline ? "met" : "breached";
   if (now >= t.slaDeadline) return "breached";
   const total = t.slaDeadline.getTime() - t.createdAt.getTime();
@@ -83,12 +91,14 @@ export const TYPE_LABELS: Record<TicketType, string> = {
   new_case: "حالة جديدة",
   follow_up: "متابعة",
   emergency: "طوارئ",
+  device_request: "طلب جهاز طبي",
 };
 
 export const TYPE_PREFIX: Record<TicketType, string> = {
   new_case: "NC",
   follow_up: "FU",
   emergency: "EM",
+  device_request: "DV",
 };
 
 export const SOURCE_LABELS: Record<TicketSource, string> = {
@@ -126,6 +136,9 @@ export const TEAM = {
   RECEPTION: "RECEPTION",
   CLINICS: "CLINICS",
   MERSAL_DECISIONS: "MERSAL_DECISIONS",
+  WAREHOUSE: "WAREHOUSE",
+  ENGINEERING: "ENGINEERING",
+  PROCUREMENT: "PROCUREMENT",
 } as const;
 
 export type SeedTeam = {
@@ -148,6 +161,10 @@ export const DEFAULT_TEAMS: SeedTeam[] = [
   { code: TEAM.RECEPTION, name: "الاستقبال", color: "#059669", description: "مصدر إدخال", isReceiver: false },
   { code: TEAM.CLINICS, name: "العيادات", color: "#0891b2", description: "مصدر إدخال", isReceiver: false },
   { code: TEAM.MERSAL_DECISIONS, name: "قرارات مرسال", color: "#4f46e5", description: "قرارات مرسال", isReceiver: true },
+  // الأجهزة الطبية
+  { code: TEAM.WAREHOUSE, name: "المخزن", color: "#0f766e", description: "صرف واستلام الأجهزة الطبية", isReceiver: false },
+  { code: TEAM.ENGINEERING, name: "الهندسية", color: "#475569", description: "فحص وصيانة الأجهزة الطبية", isReceiver: false },
+  { code: TEAM.PROCUREMENT, name: "المشتريات", color: "#a16207", description: "شراء الأجهزة الناقصة", isReceiver: false },
 ];
 
 // تيم الإدخال → المصدر الافتراضي في فورم التيكت
@@ -231,4 +248,51 @@ export function parseMentions(body: string): string[] {
     out.add(m[2].replace(/[._-]+$/, "").toLowerCase());
   }
   return [...out];
+}
+
+// ─── الأجهزة الطبية ─────────────────────────────────────
+export const DEVICE_TYPES = [
+  "BiPap", "Cpap", "اسطوانة أكسجين", "جهاز سكر", "جهاز تنفس صناعي متنقل", "جهاز شفط",
+  "جهاز قياس نسبة الاكسجين", "مرتبة هوائية", "مولد اكسجين 10 لتر", "مولد اكسجين 8 لتر",
+  "مولد اكسجين 5 لتر", "مولد اكسجين 3 لتر", "جهاز نيبولايزر",
+];
+
+export type DeviceStatus = "in_stock" | "with_patient" | "maintenance" | "out_of_stock";
+export const DEVICE_STATUS_LABELS: Record<DeviceStatus, string> = {
+  in_stock: "في المخزن", with_patient: "مع مريض", maintenance: "في الهندسية", out_of_stock: "بره الاستوك",
+};
+
+export type DeviceStage =
+  | "doctor_review" | "research_review" | "decisions_review" | "awaiting_stock"
+  | "awaiting_delivery" | "with_patient" | "returned" | "cancelled";
+export const DEVICE_STAGE_LABELS: Record<DeviceStage, string> = {
+  doctor_review: "عند طبيب المتابعة", research_review: "عند الأبحاث", decisions_review: "عند قرارات مرسال",
+  awaiting_stock: "في انتظار توفر جهاز (المشتريات)", awaiting_delivery: "جاهز للصرف (المخزن)",
+  with_patient: "الجهاز مع المريض", returned: "الجهاز رجع", cancelled: "اتلغى",
+};
+// الفريق اللي بيتصرف في كل مرحلة
+export const DEVICE_STAGE_TEAM: Partial<Record<DeviceStage, string>> = {
+  doctor_review: TEAM.FOLLOWUP_DOCTOR, research_review: TEAM.RESEARCH, decisions_review: TEAM.MERSAL_DECISIONS,
+  awaiting_stock: TEAM.PROCUREMENT, awaiting_delivery: TEAM.WAREHOUSE, with_patient: TEAM.WAREHOUSE,
+};
+
+export const ADULT_AGE = 18;
+export function ageGroup(age: number | null | undefined): string | null {
+  if (age == null || Number.isNaN(age)) return null;
+  return age >= ADULT_AGE ? "فوق السن" : "تحت السن";
+}
+
+// موافقة / رفض في مراحل المراجعة
+// الرفض من الأبحاث أو القرارات بيرجّع الطلب لطبيب المتابعة، ورفض الطبيب بيلغي الطلب
+export function deviceDecisionOutcome(stage: DeviceStage, decision: "approve" | "reject", stockAvailable: number):
+  { next: DeviceStage; team: string | null; close: boolean } {
+  if (decision === "reject") {
+    if (stage === "doctor_review") return { next: "cancelled", team: null, close: true };
+    return { next: "doctor_review", team: TEAM.FOLLOWUP_DOCTOR, close: false };
+  }
+  if (stage === "doctor_review") return { next: "research_review", team: TEAM.RESEARCH, close: false };
+  if (stage === "research_review") return { next: "decisions_review", team: TEAM.MERSAL_DECISIONS, close: false };
+  return stockAvailable > 0
+    ? { next: "awaiting_delivery", team: TEAM.WAREHOUSE, close: false }
+    : { next: "awaiting_stock", team: TEAM.PROCUREMENT, close: false };
 }

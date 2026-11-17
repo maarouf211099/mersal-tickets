@@ -23,6 +23,16 @@ export function describeEvent(action: string, metadata: unknown): string {
     case "assigned": return m.to ? `أُسندت إلى ${m.to}` : "أُلغي الإسناد";
     case "attachment_added": return `أُضيف مرفق: ${list(m.files)}`;
     case "sla_breached": return "⛔ تجاوزت التذكرة مهلة الإنجاز";
+    case "device_stage": {
+      const ST: Record<string, string> = {
+        doctor_review: "طبيب المتابعة", research_review: "الأبحاث", decisions_review: "قرارات مرسال",
+        awaiting_stock: "المشتريات (الجهاز غير متوفر)", awaiting_delivery: "المخزن للصرف", cancelled: "إلغاء الطلب",
+      };
+      const verb = m.decision === "reject" ? "❌ رفض" : m.decision === "approve" ? "✅ موافقة" : "📦 الجهاز اتوفر";
+      return withNote(`${verb} — الطلب انتقل إلى ${ST[String(m.to)] ?? m.to}`, m.note);
+    }
+    case "device_delivered": return `🩺 اتصرف الجهاز للمريض: ${m.type} — سيريال ${m.serial}${m.packing ? ` — Internal Packing ${m.packing}` : ""}`;
+    case "device_returned": return withNote(`↩ الجهاز رجع من المريض (${m.type} — ${m.serial}) واتحوّل للهندسية للفحص`, m.note);
     case "ambulance_sent": return `🚑 أُرسل طلب إسعاف لنظام إسعاف مرسال — بلاغ رقم ${m.remoteId} (${m.service}) بتاريخ ${m.serviceDate}`;
     case "comment_edited":
       return `✏️ عدّل ${m.kind === "note" ? "ملاحظة" : "تحديثًا"}: "${clip(m.from)}" ← "${clip(m.to)}"`;
@@ -53,6 +63,8 @@ export function describeSystemEvent(action: string, metadata: unknown): string {
     case "settings_updated": return "عدّل إعدادات النظام (مهلة الإنجاز / أسباب الإغلاق / الإعلان)";
     case "users_bulk": return `إجراء جماعي على ${m.count} مستخدم: ${m.op}`;
     case "comment_removed": return `حذف تحديثًا كتبه ${m.author} في ${m.ticketNumber}`;
+    case "device_added": return `أضاف جهاز ${m.type} — سيريال ${m.serial}`;
+    case "device_deleted": return `حذف جهاز ${m.type} — سيريال ${m.serial}`;
     case "users_imported": return `أضاف ${m.created} مستخدمًا دفعة واحدة`;
     case "team_created": return `أنشأ الفريق «${m.name}»`;
     case "team_updated": return `عدّل الفريق «${m.name}»${changeText ? `: ${changeText}` : ""}`;

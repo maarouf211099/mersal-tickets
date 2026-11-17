@@ -6,14 +6,16 @@ const slaMap: Record<SlaState, { label: string; cls: string; dot?: boolean }> = 
   warning:  { label: "قارب على الانتهاء", cls: "bg-amber-100 text-amber-800" },
   breached: { label: "متأخر",         cls: "bg-red-100 text-red-800", dot: true },
   met:      { label: "أُغلقت في الموعد", cls: "bg-slate-100 text-slate-700" },
+  none:     { label: "بدون مهلة", cls: "bg-slate-100 text-slate-500" },
 };
 
 const typeMap: Record<TicketType, string> = {
   new_case:  "bg-violet-50 text-violet-700 border border-violet-200",
   follow_up: "bg-brand-50 text-brand-700 border border-brand-200",
   emergency: "bg-red-50 text-red-700 border border-red-200 font-semibold",
+  device_request: "bg-sky-50 text-sky-700 border border-sky-200",
 };
-const typeIcon: Record<TicketType, string> = { new_case: "🆕", follow_up: "📋", emergency: "🚨" };
+const typeIcon: Record<TicketType, string> = { new_case: "🆕", follow_up: "📋", emergency: "🚨", device_request: "🩺" };
 
 export function StatusBadge({ status }: { status: "pending" | "closed" }) {
   return status === "pending"

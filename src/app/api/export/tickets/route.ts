@@ -5,7 +5,7 @@ import { SOURCE_LABELS, TYPE_LABELS, TRIAGE_LABELS, slaState } from "@/lib/workf
 
 export const dynamic = "force-dynamic";
 
-const SLA_AR = { within: "ضمن الوقت", warning: "قارب على الانتهاء", breached: "متأخر", met: "في الوقت" };
+const SLA_AR = { within: "ضمن الوقت", warning: "قارب على الانتهاء", breached: "متأخر", met: "في الوقت", none: "بدون مهلة" };
 
 function csvCell(v: unknown) {
   let s = v == null ? "" : String(v);

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTicketForView } from "@/actions/tickets";
 import { isManager } from "@/lib/access";
-import { EGYPTIAN, SOURCE_LABELS, TRIAGE_LABELS, TYPE_LABELS, slaState, transferTargetsForTicket } from "@/lib/workflow";
+import { EGYPTIAN, hasSla, SOURCE_LABELS, TRIAGE_LABELS, TYPE_LABELS, slaState, transferTargetsForTicket } from "@/lib/workflow";
 import { SlaBadge, StatusBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
 import { displayName, formatBytes, formatDateTime, formatSince } from "@/lib/utils";
@@ -16,6 +16,9 @@ import { STATUS_AR as AMB_STATUS, ambulanceEnabled, ambulanceLink, ambulanceStat
 import { describeEvent } from "@/lib/event-text";
 import { RichText } from "@/components/ui/rich-text";
 import { getSettings } from "@/lib/settings";
+import { DeviceActions } from "@/components/devices/device-actions";
+import { DeviceStepper } from "@/components/devices/stepper";
+import { DEVICE_STAGE_TEAM, TEAM, ageGroup, type DeviceStage } from "@/lib/workflow";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Avatar } from "@/components/ui/avatar";
 
@@ -68,6 +71,14 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
     });
   }
   const settings = await getSettings();
+  // طلب جهاز طبي
+  const dreq = ticket.type === "device_request" ? await prisma.deviceRequest.findUnique({ where: { ticketId: ticket.id } }) : null;
+  const dDevice = dreq?.deviceId ? await prisma.device.findUnique({ where: { id: dreq.deviceId } }) : null;
+  const dAvailable = dreq && ["awaiting_stock", "awaiting_delivery"].includes(dreq.stage)
+    ? await prisma.device.findMany({ where: { type: dreq.deviceType, status: "in_stock" }, orderBy: { createdAt: "asc" }, select: { id: true, serial: true, internalPacking: true } })
+    : [];
+  const inTeam = (code: string) => isManager(user) || user.teamCodes.includes(code);
+  const stageTeam = dreq ? DEVICE_STAGE_TEAM[dreq.stage as DeviceStage] : undefined;
   const canAmbulance = canRequestAmbulance(user) && ticket.status === "pending";
 
   const since = holders.reduce<Date | null>((a, h) => (!a || h.addedAt > a ? h.addedAt : a), null);
@@ -138,7 +149,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
 
           <div className="mb-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
             <Info label="مهلة الإنجاز">
-              {ticket.status === "pending" ? <SlaCountdown deadline={ticket.slaDeadline.toISOString()} /> : formatDateTime(ticket.slaDeadline)}
+              {!hasSla(ticket) ? "بدون مهلة" : ticket.status === "pending" ? <SlaCountdown deadline={ticket.slaDeadline.toISOString()} /> : formatDateTime(ticket.slaDeadline)}
             </Info>
             <Info label="تاريخ الإنشاء">{formatDateTime(ticket.createdAt)}</Info>
             <Info label="أنشأها">{displayName(ticket.createdBy.fullName)}</Info>
@@ -222,6 +233,48 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           </div>
         )}
 
+        {dreq && (
+          <div className="card overflow-hidden">
+            <div className="border-b border-slate-100 bg-gradient-to-l from-sky-50 to-white p-5">
+              <SectionTitle icon="🩺" title={`طلب جهاز: ${dreq.deviceType}`} />
+              <DeviceStepper stage={dreq.stage as DeviceStage} />
+            </div>
+            <div className="grid grid-cols-2 gap-3 p-5 text-sm md:grid-cols-3">
+              <Info label="كود المريض" mono>{ticket.caseCode ?? "—"}</Info>
+              <Info label="التصنيف العمري">{ageGroup(ticket.age) ?? "—"}</Info>
+              <Info label="الديانة">{dreq.religion ?? "—"}</Info>
+              <Info label="المحافظة">{dreq.governorate ?? "—"}</Info>
+              <Info label="المدينة">{dreq.city ?? "—"}</Info>
+              <Info label="المنطقة">{dreq.area ?? "—"}</Info>
+              <div className="col-span-2 md:col-span-3"><Info label="العنوان بالتفصيل">{dreq.address ?? "—"}</Info></div>
+              <Info label="زيارة تمريضية">{dreq.nursingVisit ? `نعم — ${dreq.nursingFrequency ?? ""}` : "لا"}</Info>
+              <Info label="مساهمة">{dreq.hasContribution ? `${dreq.contributionType} — ${dreq.contributionAmount?.toLocaleString("ar-EG")} ج` : "لا"}</Info>
+              <Info label="نهاية القرار الاجتماعي">
+                {dreq.socialDecisionEnd ? (
+                  <span className={dreq.socialDecisionEnd < new Date() ? "text-red-600" : ""}>
+                    {new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeZone: "Africa/Cairo" }).format(dreq.socialDecisionEnd)}
+                    {dreq.socialDecisionEnd < new Date() && " (منتهي)"}
+                  </span>
+                ) : "—"}
+              </Info>
+              {dreq.socialDecision && <div className="col-span-2 md:col-span-3"><Info label="آخر قرار اجتماعي"><RichText text={dreq.socialDecision} /></Info></div>}
+            </div>
+            {dDevice && (
+              <div className="mx-5 mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+                <div>
+                  <div className="text-xs font-medium text-emerald-700">{dreq.stage === "with_patient" ? "الجهاز مع المريض" : "الجهاز اللي اتصرف"}</div>
+                  <Link href={`/devices/${dDevice.id}`} className="font-mono text-base font-bold text-slate-900 hover:text-brand-700">{dDevice.serial}</Link>
+                  {dDevice.internalPacking && <span className="mr-2 font-mono text-xs text-slate-500">IP {dDevice.internalPacking}</span>}
+                </div>
+                <div className="text-left text-xs text-slate-600">
+                  {dreq.deliveredAt && <div>اتسلّم {formatDateTime(dreq.deliveredAt)} ({formatSince(dreq.deliveredAt)})</div>}
+                  {dreq.returnedAt && <div>رجع {formatDateTime(dreq.returnedAt)}</div>}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="card p-6">
           <SectionTitle icon="📎" title="المرفقات" count={ticket.attachments.length} />
           <ul className="space-y-1.5">
@@ -287,7 +340,14 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
       </div>
 
       <div className="no-print space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:pb-4">
+        {dreq && ticket.status === "pending" && (
+          <DeviceActions ticketId={ticket.id} stage={dreq.stage} deviceType={dreq.deviceType} available={dAvailable}
+            canDecide={!!stageTeam && ["doctor_review", "research_review", "decisions_review"].includes(dreq.stage) && inTeam(stageTeam)}
+            canProcure={inTeam(TEAM.PROCUREMENT)} canWarehouse={inTeam(TEAM.WAREHOUSE)} canEdit={user.role !== "viewer"} />
+        )}
         <TicketActions
+          isDevice={!!dreq}
+          deviceWithPatient={dreq?.stage === "with_patient"}
           ticketId={ticket.id}
           perms={perms}
           isManager={isManager(user)}
@@ -312,11 +372,13 @@ const TYPE_BAND: Record<string, string> = {
   emergency: "bg-gradient-to-l from-red-500 to-rose-400",
   new_case: "bg-gradient-to-l from-violet-500 to-fuchsia-400",
   follow_up: "bg-gradient-to-l from-brand-600 to-brand-400",
+  device_request: "bg-gradient-to-l from-sky-500 to-cyan-400",
 };
 const TYPE_AVATAR: Record<string, string> = {
   emergency: "bg-gradient-to-br from-red-500 to-rose-600",
   new_case: "bg-gradient-to-br from-violet-500 to-violet-700",
   follow_up: "bg-gradient-to-br from-brand-500 to-brand-700",
+  device_request: "bg-gradient-to-br from-sky-500 to-sky-700",
 };
 
 function SectionTitle({ icon, title, count }: { icon: string; title: string; count?: number }) {

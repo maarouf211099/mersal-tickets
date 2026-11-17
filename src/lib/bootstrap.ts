@@ -23,6 +23,7 @@ export async function bootstrap() {
 
   setInterval(() => {
     slaBreachTick().catch((err) => console.error("[mersal-tickets] SLA tick failed:", err));
+    socialDecisionTick().catch((err) => console.error("[mersal-tickets] social decision tick failed:", err));
   }, 60_000).unref();
 }
 
@@ -90,6 +91,32 @@ async function slaBreachTick() {
       ticketId: t.id,
       type: "sla_breached",
       title: `⛔ تجاوزت التذكرة مهلة الإنجاز: ${t.ticketNumber}`,
+    });
+  }
+}
+
+// تنبيه قبل نهاية القرار الاجتماعي بـ7 أيام لطلبات الأجهزة اللي مع المرضى (مرة واحدة لكل طلب)
+async function socialDecisionTick() {
+  const now = new Date();
+  const soon = new Date(now.getTime() + 7 * 86_400_000);
+  const due = await prisma.deviceRequest.findMany({
+    where: { stage: "with_patient", socialDecisionEnd: { lte: soon }, socialEndNotifiedAt: null },
+    select: { id: true, ticketId: true, deviceType: true, socialDecisionEnd: true, ticket: { select: { ticketNumber: true, beneficiaryName: true, createdById: true } } },
+    take: 100,
+  });
+  if (!due.length) return;
+  const teams = await prisma.team.findMany({ where: { code: { in: ["FOLLOWUP_DOCTOR", "RESEARCH"] } }, select: { id: true } });
+  const members = await teamMemberIds(teams.map((t) => t.id));
+  for (const d of due) {
+    const claimed = await prisma.deviceRequest.updateMany({ where: { id: d.id, socialEndNotifiedAt: null }, data: { socialEndNotifiedAt: now } });
+    if (claimed.count === 0) continue;
+    const ended = d.socialDecisionEnd! < now;
+    await notify({
+      userIds: [...members, d.ticket.createdById],
+      ticketId: d.ticketId,
+      type: "device_social_end",
+      title: `${ended ? "⚠️ انتهى" : "⏳ قرب ينتهي"} القرار الاجتماعي — ${d.ticket.beneficiaryName} (${d.deviceType})`,
+      body: `التذكرة ${d.ticket.ticketNumber} — الجهاز لسه مع المريض`,
     });
   }
 }

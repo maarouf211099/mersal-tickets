@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createTicket } from "@/actions/tickets";
 import { Button } from "@/components/ui/button";
 import { Label, Select } from "@/components/ui/form";
@@ -43,7 +44,7 @@ export function NewTicketForm({ targets, defaultSource, sla }: {
     <form onSubmit={onSubmit} className="stagger space-y-5">
       <Step n={1} title="نوع الحالة" done={!!type}>
         <input type="hidden" name="type" value={type} />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {TYPES.map((t) => (
             <button key={t.key} type="button" onClick={() => setType(t.key)} aria-pressed={type === t.key}
               className={cn(
@@ -63,6 +64,15 @@ export function NewTicketForm({ targets, defaultSource, sla }: {
               </div>
             </button>
           ))}
+          <Link href="/tickets/new/device"
+            className="group relative rounded-2xl border-2 border-dashed border-sky-300 bg-sky-50/40 p-4 text-right transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-400 hover:bg-sky-50 hover:shadow-md">
+            <div className="text-3xl">🩺</div>
+            <div className="mt-2 font-bold text-slate-900">طلب جهاز طبي</div>
+            <div className="text-xs text-slate-500">مولد أكسجين، BiPap، مرتبة هوائية…</div>
+            <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-medium text-sky-700 ring-1 ring-sky-200">
+              فورم مستقل ←
+            </div>
+          </Link>
         </div>
       </Step>
 

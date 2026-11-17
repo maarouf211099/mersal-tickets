@@ -26,6 +26,8 @@ type Props = {
   details: DetailsDefaults;
   isEmergency: boolean;
   closeCategories: string[];
+  isDevice?: boolean;
+  deviceWithPatient?: boolean;
 };
 
 export function TicketActions(p: Props) {
@@ -53,7 +55,7 @@ export function TicketActions(p: Props) {
     <div className="space-y-4">
       {err && <div className="animate-expand rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
 
-      {p.perms.canReceive && (
+      {p.perms.canReceive && !p.isDevice && (
         <div className="card animate-expand border-brand-300 bg-gradient-to-b from-brand-50 to-white p-4">
           <p className="mb-3 text-sm text-slate-700">
             {p.isEmergency ? "عند الاستلام تبدأ مهلة الإنجاز من جديد، وتُسند التذكرة إليك إن لم تكن مُسندة." : "اضغط «استلام» لتأكيد أن فريقك استلم التذكرة وبدأ العمل عليها، وتُسند إليك إن لم تكن مُسندة."}
@@ -66,7 +68,7 @@ export function TicketActions(p: Props) {
       {p.perms.canTriage && <TriageCard pending={pending} onSubmit={(level, note) => run("triage", "تم تصنيف الحالة", () => triageTicket(p.ticketId, level, note))} />}
       {p.perms.canResearch && <ResearchCard pending={pending} onSubmit={(d, c) => run("research", d === "accepted" ? "تم قبول الحالة" : "تم رفض الحالة وإغلاق التذكرة", () => decideResearch(p.ticketId, d, c))} />}
 
-      {p.perms.canAct && (
+      {p.perms.canAct && !p.isDevice && (
         <TransferCard targets={p.targets} pending={pending} busy={busy === "transfer"}
           onSubmit={(teamId, note, name, clear) => run("transfer", `تم التحويل إلى ${name}`, () => transferTicket(p.ticketId, teamId, note), clear)} />
       )}
@@ -78,12 +80,12 @@ export function TicketActions(p: Props) {
         </Card>
       )}
 
-      {p.perms.canAct && (
+      {p.perms.canAct && !p.isDevice && (
         <EditCard details={p.details} pending={pending} busy={busy === "edit"}
           onSubmit={(form, close) => run("edit", "تم حفظ التعديلات", () => updateTicketDetails(p.ticketId, form), close)} />
       )}
 
-      {p.perms.canClose && (
+      {p.perms.canClose && !p.deviceWithPatient && (
         <CloseCard categories={p.closeCategories} pending={pending} busy={busy === "close"}
           onSubmit={(cat, t, clear) => run("close", "تم إغلاق التذكرة", () => closeTicket(p.ticketId, cat, t), clear)} />
       )}

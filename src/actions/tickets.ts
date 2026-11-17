@@ -308,6 +308,7 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
     const user = await requireUser();
     const { ticket, perms } = await loadWithPerms(user, ticketId);
     if (!perms.canAct) return { ok: false, error: "غير مصرح" };
+    if (ticket.type === "device_request") return { ok: false, error: "طلب الجهاز بيتحرك بالموافقات من كارت «طلب الجهاز»" };
 
     const holders = ticket.teams.filter((t) => t.access === "holder");
     const allTeams = await prisma.team.findMany();
@@ -468,6 +469,10 @@ export async function closeTicket(ticketId: string, category: string, reason: st
     const { ticket, perms } = await loadWithPerms(user, ticketId);
     if (!perms.canClose) return { ok: false, error: "غير مصرح" };
     if (!(await getSettings()).closeCategories.includes(category)) return { ok: false, error: "يُرجى اختيار سبب إغلاق التذكرة من القائمة" };
+    if (ticket.type === "device_request") {
+      const dr = await prisma.deviceRequest.findUnique({ where: { ticketId } });
+      if (dr?.stage === "with_patient") return { ok: false, error: "الجهاز مع المريض — المخزن يستلمه الأول (التذكرة بتتقفل لوحدها مع الاستلام)" };
+    }
     const text = reason.trim();
     if (text.length > 2000) return { ok: false, error: "النص طويل جداً" };
     await prisma.ticket.update({
@@ -491,6 +496,7 @@ export async function reopenTicket(ticketId: string, note: string): Promise<Resu
     const user = await requireUser();
     const { ticket, perms } = await loadWithPerms(user, ticketId);
     if (!perms.canReopen) return { ok: false, error: "إعادة الفتح تتطلب صلاحية يمنحها المدير" };
+    if (ticket.type === "device_request") return { ok: false, error: "طلبات الأجهزة لا يُعاد فتحها — اعمل طلب جديد" };
     const text = note.trim();
     if (text.length < 3) return { ok: false, error: "يُرجى كتابة سبب إعادة الفتح" };
     await prisma.ticket.update({

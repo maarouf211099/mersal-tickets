@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/access";
 import { buildTicketWhere, type TicketFilters } from "@/lib/ticket-filters";
-import { SOURCE_LABELS, TYPE_LABELS, slaState, type TicketType } from "@/lib/workflow";
+import { SOURCE_LABELS, TYPE_LABELS, hasSla, slaState, type TicketType } from "@/lib/workflow";
 import { SlaBadge, StatusBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
 import { Input, Select } from "@/components/ui/form";
@@ -190,7 +190,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
                   <Avatar name={t.createdBy.fullName} size="xs" />
                   <span className="truncate">{displayName(t.createdBy.fullName)} · {formatDateTime(t.createdAt)}</span>
                 </span>
-                {t.status === "pending" && <SlaCountdown deadline={t.slaDeadline.toISOString()} />}
+                {t.status === "pending" && hasSla(t) && <SlaCountdown deadline={t.slaDeadline.toISOString()} />}
               </div>
             </Link>
           );
@@ -244,7 +244,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
                 <td>
                   <div className="flex w-36 flex-col gap-1">
                     <SlaBadge state={sla} />
-                    {t.status === "pending" && (
+                    {t.status === "pending" && hasSla(t) && (
                       <>
                         <SlaCountdown deadline={t.slaDeadline.toISOString()} />
                         <div className="h-1 w-full overflow-hidden rounded-full bg-slate-100" title="الوقت المستهلك من المهلة">
@@ -307,13 +307,14 @@ function slaUsed(createdAt: Date, deadline: Date, now: Date) {
 }
 
 const SLA_BAR: Record<string, string> = {
-  within: "bg-emerald-500", warning: "bg-amber-500", breached: "bg-red-500", met: "bg-slate-400",
+  within: "bg-emerald-500", warning: "bg-amber-500", breached: "bg-red-500", met: "bg-slate-400", none: "bg-slate-300",
 };
 
 const TYPE_STRIPE: Record<TicketType, string> = {
   emergency: "border-r-red-500",
   new_case: "border-r-violet-400",
   follow_up: "border-r-brand-400",
+  device_request: "border-r-sky-400",
 };
 
 const SORT_FIELDS = {

@@ -53,13 +53,15 @@ export async function buildReport(r: Range) {
   ]);
 
   // ── أرقام عامة
-  const closedOnTime = closed.filter((t) => t.closedAt! <= t.slaDeadline).length;
+  // طلبات الأجهزة مالهاش مهلة — مش بتدخل في نسبة الالتزام
+  const slaClosed = closed.filter((t) => t.type !== "device_request");
+  const closedOnTime = slaClosed.filter((t) => t.closedAt! <= t.slaDeadline).length;
   const kpi = {
     created: created.length, closed: closed.length, openNow: openNow.length,
     breachedNow: openNow.filter((t) => t.slaDeadline < now).length,
     unreceivedNow: openNow.filter((t) => !t.receivedAt).length,
     unassignedNow: openNow.filter((t) => !t.assignedToId).length,
-    slaPct: closed.length ? Math.round((closedOnTime / closed.length) * 100) : null,
+    slaPct: slaClosed.length ? Math.round((closedOnTime / slaClosed.length) * 100) : null,
     avgCloseHours: closed.length ? hours(avg(closed.map((t) => t.closedAt!.getTime() - t.createdAt.getTime()))) : null,
     ambulance, logins, failedLogins,
   };
@@ -85,7 +87,7 @@ export async function buildReport(r: Range) {
   }
   const byType = typeKeys.map((k) => ({
     key: k, label: TYPE_LABELS[k], created: byTypeCreated[k], closed: byTypeClosed[k],
-    slaPct: byTypeClosed[k] ? Math.round((byTypeOnTime[k] / byTypeClosed[k]) * 100) : null,
+    slaPct: byTypeClosed[k] && k !== "device_request" ? Math.round((byTypeOnTime[k] / byTypeClosed[k]) * 100) : null,
     avgCloseHours: typeCloseMs[k]?.length ? hours(avg(typeCloseMs[k])) : null,
   }));
   const srcKeys = Object.keys(SOURCE_LABELS) as TicketSource[];
@@ -103,7 +105,7 @@ export async function buildReport(r: Range) {
     return {
       id: tm.id, name: tm.name, color: tm.color, members: tm._count.members,
       open: open.length, breached: open.filter((t) => t.slaDeadline < now).length, unreceived: open.filter((t) => !t.receivedAt).length,
-      closed: cl.length, slaPct: cl.length ? Math.round((cl.filter((t) => t.closedAt! <= t.slaDeadline).length / cl.length) * 100) : null,
+      closed: cl.length, slaPct: (() => { const c = cl.filter((t) => t.type !== "device_request"); return c.length ? Math.round((c.filter((t) => t.closedAt! <= t.slaDeadline).length / c.length) * 100) : null; })(),
       avgCloseHours: cl.length ? hours(avg(cl.map((t) => t.closedAt!.getTime() - t.createdAt.getTime()))) : null,
     };
   }).sort((a, b) => b.open + b.closed - (a.open + a.closed));

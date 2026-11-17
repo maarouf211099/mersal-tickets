@@ -25,6 +25,27 @@ enum TicketType {
   new_case // نيو كيس — 48 ساعة
   follow_up // فولو اب — 72 ساعة
   emergency // طوارئ — 30 دقيقة
+  device_request // طلب جهاز طبي — من غير مهلة
+}
+
+// حالة الجهاز الطبي في المخزون
+enum DeviceStatus {
+  in_stock // في المخزن
+  with_patient // مع مريض
+  maintenance // في الهندسية (فحص / صيانة)
+  out_of_stock // بره الاستوك — محتاج المشتريات
+}
+
+// مرحلة طلب الجهاز
+enum DeviceStage {
+  doctor_review // عند طبيب المتابعة
+  research_review // عند الأبحاث
+  decisions_review // عند قرارات مرسال
+  awaiting_stock // مستني جهاز (عند المشتريات)
+  awaiting_delivery // جاهز للصرف (عند المخزن)
+  with_patient // الجهاز مع المريض
+  returned // الجهاز رجع — التذكرة اتقفلت
+  cancelled // اتلغى (رفض الطبيب)
 }
 
 enum TicketStatus {
@@ -109,6 +130,8 @@ model User {
   closedTickets     Ticket[]        @relation("ClosedTickets")
   receivedTickets   Ticket[]        @relation("ReceivedTickets")
   ambulanceRequests AmbulanceRequest[]
+  devicesAdded      Device[]         @relation("DeviceCreatedBy")
+  deviceEvents      DeviceEvent[]
   researchDecisions Ticket[]        @relation("ResearchDecisions")
   comments          TicketComment[]
   events            TicketEvent[]
@@ -186,6 +209,9 @@ model Ticket {
   attachments   Attachment[]
   notifications Notification[]
   ambulanceRequests AmbulanceRequest[]
+  deviceRequest     DeviceRequest?
+  devicesWith       Device[]         @relation("DeviceCurrentTicket")
+  deviceEvents      DeviceEvent[]
 
   @@index([status])
   @@index([type])
@@ -286,6 +312,72 @@ model AmbulanceRequest {
   lastCheckedAt DateTime?
 
   @@index([ticketId])
+}
+
+// ═══ الأجهزة الطبية ═══
+model Device {
+  id              String        @id @default(cuid())
+  type            String // من DEVICE_TYPES
+  serial          String        @unique
+  internalPacking String? // رقم الـ Internal Packing
+  status          DeviceStatus  @default(in_stock)
+  notes           String?
+  currentTicketId String? // التذكرة (المريض) اللي الجهاز معاه دلوقتي
+  currentTicket   Ticket?       @relation("DeviceCurrentTicket", fields: [currentTicketId], references: [id], onDelete: SetNull)
+  createdById     String
+  createdBy       User          @relation("DeviceCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  events          DeviceEvent[]
+
+  @@index([type, status])
+}
+
+// كل حركة على الجهاز: إضافة، صرف، رجوع، صيانة، بره الاستوك…
+model DeviceEvent {
+  id         String        @id @default(cuid())
+  deviceId   String
+  device     Device        @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  action     String
+  fromStatus DeviceStatus?
+  toStatus   DeviceStatus?
+  ticketId   String?
+  ticket     Ticket?       @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  actorId    String?
+  actor      User?         @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  note       String?
+  createdAt  DateTime      @default(now())
+
+  @@index([deviceId, createdAt])
+}
+
+// تفاصيل طلب الجهاز (بيانات المريض الأساسية على التذكرة نفسها)
+model DeviceRequest {
+  id                  String      @id @default(cuid())
+  ticketId            String      @unique
+  ticket              Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  deviceType          String
+  stage               DeviceStage @default(doctor_review)
+  religion            String?
+  governorate         String?
+  city                String?
+  area                String?
+  address             String?
+  nursingVisit        Boolean     @default(false)
+  nursingFrequency    String?
+  socialDecision      String?
+  socialDecisionEnd   DateTime?
+  socialEndNotifiedAt DateTime?
+  hasContribution     Boolean     @default(false)
+  contributionType    String? // دورية / مرة واحدة
+  contributionAmount  Float?
+  deviceId            String? // الجهاز اللي اتصرف
+  deliveredAt         DateTime?
+  returnedAt          DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([stage, deviceType])
 }
 
 // السجل العام للنظام: الدخول، المستخدمين، الفرق، الموافقات، حذف التذاكر

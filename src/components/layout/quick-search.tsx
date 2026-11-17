@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { quickSearch } from "@/actions/search";
 
 type Hit = Awaited<ReturnType<typeof quickSearch>>[number];
-const TYPE_DOT: Record<string, string> = { emergency: "bg-red-500", new_case: "bg-violet-500", follow_up: "bg-brand-500" };
+const TYPE_DOT: Record<string, string> = { emergency: "bg-red-500", new_case: "bg-violet-500", follow_up: "bg-brand-500", device_request: "bg-sky-500" };
 
 export function openQuickSearch() {
   window.dispatchEvent(new Event("quick-search:open"));

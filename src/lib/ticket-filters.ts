@@ -24,7 +24,7 @@ export function buildTicketWhere(user: SessionUser, f: TicketFilters): Prisma.Ti
   const and: Prisma.TicketWhereInput[] = [ticketScope(user)];
   const status = f.status ?? "all";
   if (status === "pending" || status === "closed") and.push({ status });
-  if (f.type === "new_case" || f.type === "follow_up" || f.type === "emergency") and.push({ type: f.type });
+  if (f.type === "new_case" || f.type === "follow_up" || f.type === "emergency" || f.type === "device_request") and.push({ type: f.type });
   if (f.source === "call_center" || f.source === "social_media" || f.source === "reception" || f.source === "clinics") {
     and.push({ source: f.source });
   }
