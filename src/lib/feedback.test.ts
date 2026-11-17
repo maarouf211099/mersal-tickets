@@ -2,17 +2,23 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { canViewFeedbackResults, parseFeedback } from "./feedback.ts";
 
-test("feedback results: only the configured user (username or email local part, case-insensitive)", () => {
+test("feedback results: managers + the configured user (username or email local part, case-insensitive)", () => {
   const a = "mahmoud.maarouf";
-  assert.equal(canViewFeedbackResults("mahmoud.maarouf", a), true);
-  assert.equal(canViewFeedbackResults("Mahmoud.Maarouf", a), true);
-  assert.equal(canViewFeedbackResults(`${a}@example.org`, a), true);
-  assert.equal(canViewFeedbackResults("admin", a), false);
-  assert.equal(canViewFeedbackResults("mahmoud.maarouf2", a), false);
-  assert.equal(canViewFeedbackResults("x.mahmoud.maarouf", a), false);
-  assert.equal(canViewFeedbackResults("", a), false);
+  const can = (username: string | null, role = "agent") => canViewFeedbackResults({ username, role }, a);
+  assert.equal(can("admin", "manager"), true);
+  assert.equal(can("anyone", "manager"), true);
+  assert.equal(can("mahmoud.maarouf"), true);
+  assert.equal(can("Mahmoud.Maarouf", "viewer"), true);
+  assert.equal(can(`${a}@example.org`), true);
+  assert.equal(can("admin"), false);
+  assert.equal(can("sup1", "supervisor"), false);
+  assert.equal(can("v1", "viewer"), false);
+  assert.equal(can("mahmoud.maarouf2"), false);
+  assert.equal(can("x.mahmoud.maarouf"), false);
+  assert.equal(can(""), false);
+  assert.equal(can(null), false);
   assert.equal(canViewFeedbackResults(null, a), false);
-  assert.equal(canViewFeedbackResults("someone", "someone"), true);
+  assert.equal(canViewFeedbackResults({ username: "someone", role: "agent" }, "someone"), true);
 });
 
 test("feedback validation", () => {

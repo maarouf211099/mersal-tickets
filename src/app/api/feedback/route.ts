@@ -33,11 +33,11 @@ export async function POST(req: Request) {
   return Response.json({ ok: true });
 }
 
-// كل الردود — لشخص واحد بس (FEEDBACK_RESULTS_USER)
+// كل الردود — للمديرين (manager) + FEEDBACK_RESULTS_USER
 export async function GET() {
   const s = await auth();
   if (!s || s.user.mustChangePassword) return unauthorized();
-  if (!canViewFeedbackResults(s.user.username)) {
+  if (!canViewFeedbackResults(s.user)) {
     return Response.json({ error: "غير مسموح لك بعرض نتائج التقييم." }, { status: 403 });
   }
 

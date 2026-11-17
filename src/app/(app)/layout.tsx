@@ -42,7 +42,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       <ScrollTop />
       <Toaster />
-      <FeedbackPrompt system="tickets" name="نظام التذاكر" user={String(user.id)} canViewResults={canViewFeedbackResults(user.username)} />
+      <FeedbackPrompt system="tickets" name="نظام التذاكر" user={String(user.id)} canViewResults={canViewFeedbackResults(user)} />
     </div>
   );
 }

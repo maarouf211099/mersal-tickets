@@ -3,15 +3,18 @@
 // حملة التقييم الحالية — لازم تطابق CAMPAIGN في public/mersal-feedback.js
 export const FEEDBACK_CAMPAIGN = "eval-2026-11";
 
-// الشخص الوحيد اللي يشوف نتايج التقييم (اسم المستخدم، أو الجزء اللي قبل @ لو الحساب بالإيميل)
-// يتغيّر من FEEDBACK_RESULTS_USER في .env
+// مين يشوف نتايج التقييم:
+//   - أي مستخدم بدور "manager" (مدير النظام — أعلى دور في UserRole، زي isAdmin في permissions.ts)
+//   - بالإضافة لمستخدم واحد محدد حتى لو مش مدير: FEEDBACK_RESULTS_USER في .env (الافتراضي mahmoud.maarouf)
+//     بيتقارن باسم المستخدم، أو بالجزء اللي قبل @ لو الحساب بالإيميل
 export const DEFAULT_FEEDBACK_RESULTS_USER = "mahmoud.maarouf";
+export const FEEDBACK_RESULTS_ROLES: readonly string[] = ["manager"];
 
 export function feedbackResultsUser(): string {
   return (process.env.FEEDBACK_RESULTS_USER || "").trim().toLowerCase() || DEFAULT_FEEDBACK_RESULTS_USER;
 }
 
-export function canViewFeedbackResults(username: string | null | undefined, allowed = feedbackResultsUser()): boolean {
+function isResultsUser(username: string | null | undefined, allowed: string): boolean {
   const u = (username || "").trim().toLowerCase();
   const a = allowed.trim().toLowerCase();
   if (!u || !a) return false;
@@ -19,6 +22,15 @@ export function canViewFeedbackResults(username: string | null | undefined, allo
   // الحسابات اللي اسمها إيميل: نقارن الجزء اللي قبل @ بس
   const at = u.lastIndexOf("@");
   return at > 0 && u.slice(0, at) === a;
+}
+
+export function canViewFeedbackResults(
+  user: { username?: string | null; role?: string | null } | null | undefined,
+  allowed = feedbackResultsUser(),
+): boolean {
+  if (!user) return false;
+  if (user.role && FEEDBACK_RESULTS_ROLES.includes(user.role)) return true;
+  return isResultsUser(user.username, allowed);
 }
 
 export type FeedbackInput = {
