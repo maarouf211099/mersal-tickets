@@ -78,9 +78,9 @@
     '.mfb-ta{min-height:70px;resize:vertical}' +
     '.mfb-in:focus,.mfb-ta:focus{outline:none;border-color:#0E7C72;box-shadow:0 0 0 3px #E4F4F1}' +
     '.mfb-err{display:none;background:#FCE7E6;color:#B42318;border-radius:10px;padding:8px 12px;font-size:13.5px;margin-bottom:10px}' +
-    '.mfb-fab{position:fixed;bottom:16px;left:16px;z-index:2147482000;border:0;border-radius:999px;padding:9px 14px;background:#0E7C72;color:#fff;' +
-    'font:700 13px Cairo,Tajawal,"Segoe UI",Tahoma,sans-serif;box-shadow:0 6px 18px -6px rgba(0,0,0,.4);cursor:pointer;direction:rtl}' +
-    '.mfb-fab:hover{background:#0B6B62}' +
+    '.mfb-fab{position:fixed;bottom:16px;left:16px;z-index:2147482000;width:46px;height:46px;border:0;border-radius:50%;padding:0;background:#0E7C72;color:#fff;' +
+    'font-size:20px;line-height:46px;text-align:center;box-shadow:0 6px 18px -6px rgba(0,0,0,.45);cursor:pointer;opacity:.9;transition:transform .15s,opacity .15s}' +
+    '.mfb-fab:hover{opacity:1;transform:scale(1.08);background:#0B6B62}.mfb-fab:focus-visible{outline:3px solid #E6A82A;outline-offset:2px}' +
     '.mfb-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}' +
     '.mfb-kpi{background:#F1F6F4;border-radius:12px;padding:10px 12px}' +
     '.mfb-kpi b{display:block;font-size:22px;color:#0E7C72;line-height:1.2}.mfb-kpi span{font-size:12.5px;color:#5d6f6b}' +
@@ -88,7 +88,7 @@
     '.mfb-dr{display:flex;align-items:center;gap:8px;font-size:13px}.mfb-dr i{display:block;height:10px;border-radius:5px;background:#E6A82A;min-width:2px}' +
     '.mfb-tw{overflow:auto;border:1px solid #e3e9e6;border-radius:12px}' +
     '.mfb-t{width:100%;border-collapse:collapse;font-size:13px}' +
-    '.mfb-t th{background:#0E7C72;color:#fff;padding:8px 10px;text-align:right;white-space:nowrap;position:sticky;top:0}' +
+    '.mfb-ov .mfb-t th{background:#0E7C72!important;color:#fff!important;padding:8px 10px;text-align:right;white-space:nowrap;position:sticky;top:0;border:0}' +
     '.mfb-t td{padding:8px 10px;border-top:1px solid #e3e9e6;vertical-align:top;white-space:pre-wrap}' +
     '.mfb-t tr:nth-child(even) td{background:#f8fbfa}' +
     '.mfb-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.mfb-row .mfb-btn{width:auto;padding:9px 16px;font-size:14px}' +
@@ -265,7 +265,8 @@
     if (show && !fab) {
       ensureCss();
       fab = document.createElement('button'); fab.id = 'mfb-fab'; fab.className = 'mfb-fab'; fab.type = 'button';
-      fab.textContent = '📊 نتائج التقييم'; fab.onclick = showResults; document.body.appendChild(fab);
+      fab.textContent = '📊'; fab.title = 'نتائج التقييم'; fab.setAttribute('aria-label', 'نتائج التقييم');
+      fab.onclick = showResults; document.body.appendChild(fab);
     } else if (!show && fab) { fab.parentNode.removeChild(fab); }
   }
 
