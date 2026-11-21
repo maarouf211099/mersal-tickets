@@ -5,10 +5,14 @@ import { TEAM } from "./workflow";
 
 export const isManager = (u: Pick<SessionUser, "role">) => u.role === "manager";
 
-// كل تيم بيشوف التيكتات بتاعته بس: اللي عنده دلوقتي أو مرّت عليه قبل كده + اللي المستخدم عملها أو مسندة له
-// المدير بيشوف كل حاجة
+// الأبحاث وقرارات مرسال بس اللي شايفين تذاكرهم وحدهم — باقي الناس والمدير بيشوفوا كل التذاكر
+const RESTRICTED_TEAMS: string[] = [TEAM.RESEARCH, TEAM.MERSAL_DECISIONS];
+export const isRestricted = (u: Pick<SessionUser, "role" | "teamCodes">) =>
+  !isManager(u) && u.teamCodes.some((c) => RESTRICTED_TEAMS.includes(c));
+
+// للأبحاث والقرارات: اللي عند فريقهم دلوقتي أو مرّت عليه قبل كده + اللي المستخدم عملها أو مسندة له
 export function ticketScope(u: SessionUser): Prisma.TicketWhereInput {
-  if (isManager(u)) return {};
+  if (!isRestricted(u)) return {};
   return {
     OR: [
       { createdById: u.id },
@@ -23,7 +27,7 @@ export function ticketScope(u: SessionUser): Prisma.TicketWhereInput {
 
 // اللي عند فريق المستخدم دلوقتي (الافتراضي في القائمة والرئيسية علشان مفيش حاجة تتوه)
 export function teamHoldScope(u: SessionUser): Prisma.TicketWhereInput {
-  if (isManager(u) || !u.teamIds.length) return {};
+  if (!isRestricted(u)) return {};
   return { teams: { some: { teamId: { in: u.teamIds }, access: "holder" } } };
 }
 
@@ -42,7 +46,7 @@ export function ticketPermissions(u: SessionUser, t: TicketForAccess) {
   const manager = isManager(u);
   const holders = t.teams.filter((x) => x.access === "holder");
   const holderCodes = holders.map((h) => h.team.code);
-  const canView = manager || t.createdById === u.id || (!!t.assignedToId && t.assignedToId === u.id)
+  const canView = !isRestricted(u) || t.createdById === u.id || (!!t.assignedToId && t.assignedToId === u.id)
     || t.teams.some((x) => u.teamIds.includes(x.teamId)) || (t.teamVisits ?? []).some((x) => u.teamIds.includes(x.teamId));
   const pending = t.status === "pending";
   const writer = u.role !== "viewer";

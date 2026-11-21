@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, teamHoldScope, ticketScope } from "@/lib/access";
+import { isRestricted, teamHoldScope, ticketScope } from "@/lib/access";
 import { TYPE_LABELS, hasSla, slaLabel, slaState, type TicketType } from "@/lib/workflow";
 import { SlaBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   const { user } = s;
   // غير المدير: الأرقام والقوائم على اللي عند فريقه دلوقتي بس
   const scope: Prisma.TicketWhereInput = { AND: [ticketScope(user), teamHoldScope(user)] };
-  const mgr = isManager(user);
+  const mgr = !isRestricted(user); // كل الناس ماعدا الأبحاث والقرارات بيشوفوا الصورة كاملة
   const now = new Date();
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);

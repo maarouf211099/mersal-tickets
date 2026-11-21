@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager } from "@/lib/access";
+import { isRestricted, isManager } from "@/lib/access";
 import { buildTicketWhere, type TicketFilters } from "@/lib/ticket-filters";
 import { SOURCE_LABELS, TYPE_LABELS, hasSla, slaState, type TicketType } from "@/lib/workflow";
 import { SlaBadge, StatusBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
@@ -28,7 +28,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
   // عدّاد كل تبويب حالة — بنفس باقي الفلاتر
   const tabWhere = (status: string, sla?: string) => buildTicketWhere(user, { ...f, status, sla });
   // تبويب الفريق (لغير المدير): عند فريقي الآن / كل اللي مرّ على فريقي
-  const teamView = !isManager(user) && user.teamIds.length > 0;
+  const teamView = isRestricted(user);
   const [total, tickets, teams, cAll, cPending, cBreached, cClosed] = await Promise.all([
     prisma.ticket.count({ where }),
     prisma.ticket.findMany({
@@ -161,6 +161,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
         </Select>
         <Select name="teamId" defaultValue={f.teamId ?? ""}>
           <option value="">جميع الفرق</option>
+          {!isManager(user) && !teamView && <option value="mine">تذاكر فرقي</option>}
           {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </Select>
         <Select name="period" defaultValue={f.period ?? ""}>
