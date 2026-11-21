@@ -1,18 +1,11 @@
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { FEEDBACK_CAMPAIGN } from "@/lib/feedback";
-
 export const dynamic = "force-dynamic";
 
-// هل المستخدم الحالي قيّم قبل كده (من أي جهاز)
+// التقييم اتشال — التبويبات القديمة اللي لسه فيها الكود القديم بتسأل هنا كل شوية؛
+// لو مالقتش رد بتعرض الرسالة، فـ"submitted" بيخليها تبطّل وتحفظ ده عند المستخدم.
+// الحملة كانت لحد 2026-11-30، وبعدها ينفع يتشال الملف ده.
 export async function GET() {
-  const s = await auth();
-  if (!s || s.user.mustChangePassword) {
-    return Response.json({ error: "انتهت الجلسة — سجّل الدخول تاني." }, { status: 401 });
-  }
-  const found = await prisma.feedback.findUnique({
-    where: { campaign_userId: { campaign: FEEDBACK_CAMPAIGN, userId: s.user.id } },
-    select: { id: true },
-  });
-  return Response.json({ submitted: !!found }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json(
+    { ok: true, submitted: true, canViewResults: false },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

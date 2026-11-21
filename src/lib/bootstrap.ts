@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "./prisma";
 import { DEFAULT_TEAMS } from "./workflow";
 import { notify, teamMemberIds } from "./notify";
-import { exportFeedbackSnapshot } from "./feedback-snapshot";
 
 const g = globalThis as unknown as { __mersalTicketsBoot?: boolean };
 
@@ -17,9 +16,6 @@ export async function bootstrap() {
     // الغالب إن الـ migrations لسه ما اتعملتش: npm run db:migrate
     console.error("[mersal-tickets] bootstrap failed:", e);
   }
-
-  // ملف نتايج التقييم المشترك (للردود الموجودة قبل التشغيل) — الفشل بيتسجل بس
-  void exportFeedbackSnapshot();
 
   setInterval(() => {
     slaBreachTick().catch((err) => console.error("[mersal-tickets] SLA tick failed:", err));
