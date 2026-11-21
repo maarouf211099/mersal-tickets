@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ticketScope } from "@/lib/access";
 import { casesEnabled } from "@/lib/cases";
 import { stockByType } from "@/lib/device-stock";
 import { PageHeader } from "@/components/ui/page-header";
@@ -12,7 +13,7 @@ export default async function EditDeviceRequestPage({ params }: { params: Promis
   const s = await auth();
   if (!s) redirect("/login");
   const { id } = await params;
-  const t = await prisma.ticket.findUnique({ where: { id }, include: { deviceRequest: true } });
+  const t = await prisma.ticket.findFirst({ where: { AND: [{ id }, ticketScope(s.user)] }, include: { deviceRequest: true } });
   if (!t?.deviceRequest) notFound();
   if (s.user.role === "viewer" || t.status !== "pending") redirect(`/tickets/${id}`);
   const d = t.deviceRequest;

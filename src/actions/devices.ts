@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser, type SessionUser } from "@/lib/auth";
-import { isManager } from "@/lib/access";
+import { isManager, ticketScope } from "@/lib/access";
 import { logSystem } from "@/lib/audit";
 import { notify, teamMemberIds } from "@/lib/notify";
 import { nextTicketNumber } from "@/lib/ticket-number";
@@ -144,7 +144,7 @@ export async function updateDeviceRequest(ticketId: string, form: FormData): Pro
   try {
     const user = await requireUser();
     if (user.role === "viewer") return { ok: false, error: "غير مصرح" };
-    const t = await prisma.ticket.findUnique({ where: { id: ticketId }, include: { deviceRequest: true } });
+    const t = await prisma.ticket.findFirst({ where: { AND: [{ id: ticketId }, ticketScope(user)] }, include: { deviceRequest: true } });
     if (!t?.deviceRequest) return { ok: false, error: "الطلب غير موجود" };
     if (t.status !== "pending") return { ok: false, error: "التذكرة مغلقة" };
     const r = readRequest(form);

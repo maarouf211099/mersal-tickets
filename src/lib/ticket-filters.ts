@@ -1,12 +1,12 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import type { SessionUser } from "./auth";
-import { myWorkScope, ticketScope } from "./access";
+import { teamHoldScope, ticketScope } from "./access";
 import { normalizeDigits } from "./workflow";
 
 export type TicketFilters = {
   status?: string; type?: string; source?: string; teamId?: string;
-  q?: string; sla?: string; mine?: string; page?: string;
+  q?: string; sla?: string; mine?: string; page?: string; view?: string;
   period?: string; sort?: string; dir?: string;
 };
 
@@ -28,8 +28,9 @@ export function buildTicketWhere(user: SessionUser, f: TicketFilters): Prisma.Ti
   if (f.source === "call_center" || f.source === "social_media" || f.source === "reception" || f.source === "clinics") {
     and.push({ source: f.source });
   }
-  if (f.teamId === "mine") and.push(myWorkScope(user));
-  else if (f.teamId) and.push({ teams: { some: { teamId: f.teamId, access: "holder" } } });
+  // الافتراضي لغير المدير: اللي عند فريقه دلوقتي — view=all يعرض كل اللي مرّ على فريقه
+  if (f.view !== "all") and.push(teamHoldScope(user));
+  if (f.teamId && f.teamId !== "mine") and.push({ teams: { some: { teamId: f.teamId, access: "holder" } } });
   if (f.mine === "1") and.push({ assignedToId: user.id });
   const from = periodStart(f.period);
   if (from) and.push({ createdAt: { gte: from } });

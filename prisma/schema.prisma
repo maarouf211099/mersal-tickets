@@ -101,44 +101,45 @@ model Team {
   restrictedTeams    Team[]   @relation("TransferRestriction")
   createdAt          DateTime @default(now())
 
-  members   TeamMember[]
-  tickets   TicketTeam[]
-  approvals Approval[]
+  members      TeamMember[]
+  tickets      TicketTeam[]
+  ticketVisits TicketTeamVisit[]
+  approvals    Approval[]
 }
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  fullName     String
-  passwordHash String
-  role         UserRole @default(agent)
-  isActive     Boolean  @default(true)
+  id                 String    @id @default(cuid())
+  username           String    @unique
+  fullName           String
+  passwordHash       String
+  role               UserRole  @default(agent)
+  isActive           Boolean   @default(true)
   // صلاحيات إضافية فردية
-  canReopen    Boolean  @default(false)
-  canExport    Boolean  @default(false)
+  canReopen          Boolean   @default(false)
+  canExport          Boolean   @default(false)
   // بيتعمل true لما المدير يحدد كلمة المرور (إنشاء أو إعادة تعيين) — المستخدم لازم يغيّرها أول ما يدخل
-  mustChangePassword Boolean @default(false)
+  mustChangePassword Boolean   @default(false)
   lastLoginAt        DateTime?
-  createdAt    DateTime @default(now())
+  createdAt          DateTime  @default(now())
 
   // صلاحيات فئات الموافقات (JSON: { medications: true, exceptions: false, ... })
   approvalPerms Json @default("{}")
 
   teams             TeamMember[]
-  createdTickets    Ticket[]        @relation("CreatedTickets")
-  assignedTickets   Ticket[]        @relation("AssignedTickets")
-  closedTickets     Ticket[]        @relation("ClosedTickets")
-  receivedTickets   Ticket[]        @relation("ReceivedTickets")
+  createdTickets    Ticket[]           @relation("CreatedTickets")
+  assignedTickets   Ticket[]           @relation("AssignedTickets")
+  closedTickets     Ticket[]           @relation("ClosedTickets")
+  receivedTickets   Ticket[]           @relation("ReceivedTickets")
   ambulanceRequests AmbulanceRequest[]
-  devicesAdded      Device[]         @relation("DeviceCreatedBy")
+  devicesAdded      Device[]           @relation("DeviceCreatedBy")
   deviceEvents      DeviceEvent[]
-  researchDecisions Ticket[]        @relation("ResearchDecisions")
+  researchDecisions Ticket[]           @relation("ResearchDecisions")
   comments          TicketComment[]
   events            TicketEvent[]
   attachments       Attachment[]
   notifications     Notification[]
-  createdApprovals  Approval[]      @relation("CreatedApprovals")
-  reviewedApprovals Approval[]      @relation("ReviewedApprovals")
+  createdApprovals  Approval[]         @relation("CreatedApprovals")
+  reviewedApprovals Approval[]         @relation("ReviewedApprovals")
   systemEvents      SystemEvent[]
   feedback          Feedback[]
 }
@@ -184,10 +185,10 @@ model Ticket {
   slaDeadline         DateTime
   slaBreachNotifiedAt DateTime?
 
-  closedAt    DateTime?
-  closedById  String?
-  closedBy    User?     @relation("ClosedTickets", fields: [closedById], references: [id], onDelete: SetNull)
-  closeReason String?
+  closedAt      DateTime?
+  closedById    String?
+  closedBy      User?     @relation("ClosedTickets", fields: [closedById], references: [id], onDelete: SetNull)
+  closeReason   String?
   // سبب الإغلاق من القائمة (CLOSE_CATEGORIES) — closeReason بقى تفاصيل اختيارية
   closeCategory String?
 
@@ -203,14 +204,15 @@ model Ticket {
   researchDecidedById String?
   researchDecidedBy   User?             @relation("ResearchDecisions", fields: [researchDecidedById], references: [id], onDelete: SetNull)
 
-  teams         TicketTeam[]
-  comments      TicketComment[]
-  events        TicketEvent[]
-  attachments   Attachment[]
-  notifications Notification[]
+  teams             TicketTeam[]
+  teamVisits        TicketTeamVisit[]
+  comments          TicketComment[]
+  events            TicketEvent[]
+  attachments       Attachment[]
+  notifications     Notification[]
   ambulanceRequests AmbulanceRequest[]
   deviceRequest     DeviceRequest?
-  devicesWith       Device[]         @relation("DeviceCurrentTicket")
+  devicesWith       Device[]           @relation("DeviceCurrentTicket")
   deviceEvents      DeviceEvent[]
 
   @@index([status])
@@ -231,6 +233,19 @@ model TicketTeam {
 
   @@id([ticketId, teamId])
   @@index([teamId, access])
+}
+
+// كل تيم مسك التيكت في أي وقت (بيتسجل تلقائي بـ trigger على TicketTeam) — علشان التيم يفضل شايف شغله القديم
+model TicketTeamVisit {
+  ticketId String
+  ticket   Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  teamId   String
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  firstAt  DateTime @default(now())
+  lastAt   DateTime @default(now())
+
+  @@id([ticketId, teamId])
+  @@index([teamId])
 }
 
 model TicketComment {

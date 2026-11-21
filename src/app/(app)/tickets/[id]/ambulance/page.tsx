@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ticketScope } from "@/lib/access";
 import { canRequestAmbulance } from "@/lib/ambulance-access";
 import { ambulanceEnabled } from "@/lib/ambulance";
 import { AmbulanceForm } from "./form";
@@ -12,7 +13,7 @@ export default async function AmbulanceRequestPage({ params }: { params: Promise
   const s = await auth();
   if (!s) redirect("/login");
   const { id } = await params;
-  const t = await prisma.ticket.findUnique({ where: { id } });
+  const t = await prisma.ticket.findFirst({ where: { AND: [{ id }, ticketScope(s.user)] } });
   if (!t) notFound();
   if (!canRequestAmbulance(s.user) || t.status !== "pending") redirect(`/tickets/${id}`);
 

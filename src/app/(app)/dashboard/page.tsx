@@ -1,8 +1,9 @@
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ticketScope } from "@/lib/access";
+import { isManager, teamHoldScope, ticketScope } from "@/lib/access";
 import { TYPE_LABELS, hasSla, slaLabel, slaState, type TicketType } from "@/lib/workflow";
 import { SlaBadge, TeamChip, TypeBadge } from "@/components/ui/badge";
 import { SlaCountdown } from "@/components/tickets/sla-countdown";
@@ -16,7 +17,9 @@ export default async function DashboardPage() {
   const s = await auth();
   if (!s) redirect("/login");
   const { user } = s;
-  const scope = ticketScope(user);
+  // غير المدير: الأرقام والقوائم على اللي عند فريقه دلوقتي بس
+  const scope: Prisma.TicketWhereInput = { AND: [ticketScope(user), teamHoldScope(user)] };
+  const mgr = isManager(user);
   const now = new Date();
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
@@ -33,7 +36,7 @@ export default async function DashboardPage() {
       include: { teams: { where: { access: "holder" }, include: { team: true } } },
     }),
     prisma.team.findMany({
-      where: { isActive: true },
+      where: { isActive: true, ...(!mgr && user.teamIds.length && { id: { in: user.teamIds } }) },
       orderBy: { name: "asc" },
       include: { _count: { select: { tickets: { where: { access: "holder", ticket: { status: "pending" } } } } } },
     }),
@@ -56,7 +59,7 @@ export default async function DashboardPage() {
             <p className="text-sm text-brand-100">{today}</p>
             <h1 className="mt-1 text-2xl font-bold">مرحبًا، {user.name} 👋</h1>
             <p className="mt-1 text-sm text-brand-50/90">
-              {totalPending === 0 ? "لا توجد تذاكر مفتوحة الآن" : `يوجد ${totalPending} تذكرة قيد التنفيذ في النظام`}
+              {totalPending === 0 ? (mgr ? "لا توجد تذاكر مفتوحة الآن" : "مفيش تذاكر مفتوحة عند فريقك دلوقتي 🎉") : mgr ? `يوجد ${totalPending} تذكرة قيد التنفيذ في النظام` : `عند فريقك ${totalPending} تذكرة قيد التنفيذ`}
               {breached > 0 && <span className="font-semibold text-accent-200"> — منها {breached} تجاوزت المهلة</span>}
             </p>
           </div>
@@ -144,7 +147,7 @@ export default async function DashboardPage() {
         <div className="card p-5">
           <h2 className="mb-4 flex items-center gap-2 font-semibold text-slate-900">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600"><InboxIcon className="h-4 w-4" /></span>
-            أعمال الفرق
+            {mgr ? "أعمال الفرق" : "فريقي"}
           </h2>
           <ul className="stagger space-y-1">
             {sortedTeams.map((t) => {

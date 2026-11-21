@@ -27,6 +27,8 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
   const page = Math.max(1, Number(f.page) || 1);
   // عدّاد كل تبويب حالة — بنفس باقي الفلاتر
   const tabWhere = (status: string, sla?: string) => buildTicketWhere(user, { ...f, status, sla });
+  // تبويب الفريق (لغير المدير): عند فريقي الآن / كل اللي مرّ على فريقي
+  const teamView = !isManager(user) && user.teamIds.length > 0;
   const [total, tickets, teams, cAll, cPending, cBreached, cClosed] = await Promise.all([
     prisma.ticket.count({ where }),
     prisma.ticket.findMany({
@@ -55,6 +57,11 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
     prisma.ticket.count({ where: tabWhere("pending", "breached") }),
     prisma.ticket.count({ where: tabWhere("closed") }),
   ]);
+  const [cHeld, cVisible] = teamView ? await Promise.all([
+    prisma.ticket.count({ where: buildTicketWhere(user, { ...f, view: "" }) }),
+    prisma.ticket.count({ where: buildTicketWhere(user, { ...f, view: "all" }) }),
+  ]) : [0, 0];
+  const myTeams = teamView ? teams.filter((t) => user.teamIds.includes(t.id)).map((t) => t.name).join(" و") : "";
   const curStatus = f.status ?? "all";
   const TABS = [
     { key: "all", label: "الكل", count: cAll, active: curStatus === "all" && f.sla !== "breached", href: { status: "all", sla: "" } },
@@ -107,6 +114,24 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
         )}
       </PageHeader>
 
+      {teamView && (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-1.5 ring-1 ring-slate-200 sm:w-fit">
+          {[
+            { v: "", label: `📥 عند ${myTeams || "فريقي"} الآن`, n: cHeld },
+            { v: "all", label: "🗂️ كل اللي مرّ على فريقي", n: cVisible },
+          ].map((x) => {
+            const on = (f.view ?? "") === x.v;
+            return (
+              <Link key={x.v || "held"} href={`/tickets?${qs({ view: x.v, page: "" })}`}
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all ${on ? "bg-slate-900 text-white shadow" : "text-slate-600 hover:bg-slate-100"}`}>
+                {x.label}
+                <span className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${on ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>{x.n}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {TABS.map((t) => (
           <Link key={t.key} href={`/tickets?${qs({ ...t.href, page: "" })}`}
@@ -136,7 +161,6 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
         </Select>
         <Select name="teamId" defaultValue={f.teamId ?? ""}>
           <option value="">جميع الفرق</option>
-          {!isManager(user) && <option value="mine">تذاكر فرقي</option>}
           {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </Select>
         <Select name="period" defaultValue={f.period ?? ""}>
@@ -154,6 +178,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
         </div>
         {f.sla === "breached" && <input type="hidden" name="sla" value="breached" />}
         {f.mine === "1" && <input type="hidden" name="mine" value="1" />}
+        {f.view && <input type="hidden" name="view" value={f.view} />}
         {sortKey && <input type="hidden" name="sort" value={sortKey} />}
         {sortKey && <input type="hidden" name="dir" value={sortDir} />}
       </form>

@@ -31,7 +31,7 @@ async function guard(fn: () => Promise<Result>): Promise<Result> {
 async function loadTicket(ticketId: string) {
   return prisma.ticket.findUnique({
     where: { id: ticketId },
-    include: { teams: { include: { team: { select: { id: true, code: true, name: true } } } } },
+    include: { teams: { include: { team: { select: { id: true, code: true, name: true } } } }, teamVisits: { select: { teamId: true } } },
   });
 }
 type LoadedTicket = NonNullable<Awaited<ReturnType<typeof loadTicket>>>;
@@ -653,6 +653,7 @@ export async function getTicketForView(ticketId: string) {
     where: { AND: [{ id: ticketId }, ticketScope(user)] },
     include: {
       teams: { include: { team: true }, orderBy: { addedAt: "asc" } },
+      teamVisits: { select: { teamId: true } },
       createdBy: { select: { fullName: true, username: true } },
       assignedTo: { select: { id: true, fullName: true } },
       closedBy: { select: { fullName: true } },
