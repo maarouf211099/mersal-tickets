@@ -252,7 +252,12 @@ export function transferTargetsForTicket<T extends TeamLite>(
   }
   const decisions = teams.find((t) => t.code === TEAM.MERSAL_DECISIONS);
   if (!isManager && decisions && holderIds.includes(decisions.id) && actorTeamIds.includes(decisions.id)) {
-    return teams.filter((t) => t.isActive && !holderIds.includes(t.id) && !!t.code && DECISIONS_TRANSFER_CODES.includes(t.code));
+    const limited = teams.filter((t) => t.isActive && !holderIds.includes(t.id) && !!t.code && DECISIONS_TRANSFER_CODES.includes(t.code));
+    // لو المستخدم في فريق تاني كمان (زي المفوضية) يفضل عنده التحويلات العادية بتاعة فريقه التاني
+    const otherTeams = actorTeamIds.filter((id) => id !== decisions.id);
+    if (!otherTeams.length) return limited;
+    const normal = transferTargets(teams, otherTeams, false, holderIds);
+    return [...limited, ...normal.filter((t) => !limited.some((l) => l.id === t.id))];
   }
   return transferTargets(teams, actorTeamIds, isManager, holderIds);
 }

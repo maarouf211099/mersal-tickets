@@ -7,8 +7,12 @@ export const isManager = (u: Pick<SessionUser, "role">) => u.role === "manager";
 
 // الأبحاث وقرارات مرسال بس اللي شايفين تذاكرهم وحدهم — باقي الناس والمدير بيشوفوا كل التذاكر
 const RESTRICTED_TEAMS: string[] = [TEAM.RESEARCH, TEAM.MERSAL_DECISIONS];
-export const isRestricted = (u: Pick<SessionUser, "role" | "teamCodes">) =>
-  !isManager(u) && u.teamCodes.some((c) => RESTRICTED_TEAMS.includes(c));
+// اللي في فريق تاني كمان غير الأبحاث/القرارات بيشوف كل التذاكر زي أي حد
+export const isRestricted = (u: Pick<SessionUser, "role" | "teamCodes" | "teamIds">) => {
+  if (isManager(u)) return false;
+  const restricted = u.teamCodes.filter((c) => RESTRICTED_TEAMS.includes(c)).length;
+  return restricted > 0 && restricted === u.teamIds.length;
+};
 
 // للأبحاث والقرارات: اللي عند فريقهم دلوقتي أو مرّت عليه قبل كده + اللي المستخدم عملها أو مسندة له
 export function ticketScope(u: SessionUser): Prisma.TicketWhereInput {
