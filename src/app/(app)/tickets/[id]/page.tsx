@@ -183,6 +183,8 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                 {ticket.mersalDecidedBy && <span className="text-xs text-slate-400"> — {displayName(ticket.mersalDecidedBy.fullName)}</span>}
               </Info>
             )}
+            {ticket.sponsorAmount && <Info label="قيمة المساهمة">{ticket.sponsorAmount}</Info>}
+            {ticket.sponsorDuration && <Info label="مدة المساهمة">{ticket.sponsorDuration}</Info>}
           </div>
 
           {ticket.description && (

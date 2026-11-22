@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Select, Textarea } from "@/components/ui/form";
+import { Input, Select, Textarea } from "@/components/ui/form";
 import { DetailsFields, type DetailsDefaults } from "@/components/tickets/details-fields";
 import { displayName } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
@@ -67,7 +67,7 @@ export function TicketActions(p: Props) {
 
       {p.perms.canTriage && <TriageCard pending={pending} onSubmit={(level, note) => run("triage", "تم تصنيف الحالة", () => triageTicket(p.ticketId, level, note))} />}
       {p.perms.canMersalDecide && !p.isDevice && <MersalDecisionCard pending={pending} busy={busy}
-        onSubmit={(d, c, clear) => run(`mersal-${d}`, d === "sponsor" ? "تم التكفل — اتحوّلت لطبيب المتابعة" : "تم القرار — اتحوّلت لـ Admin الطوارئ لإبلاغ الحالة", () => decideMersal(p.ticketId, d, c), clear)} />}
+        onSubmit={(d, c, sp, clear) => run(`mersal-${d}`, d === "sponsor" ? "تم التكفل — اتحوّلت لطبيب المتابعة" : "تم القرار — اتحوّلت لـ Admin الطوارئ لإبلاغ الحالة", () => decideMersal(p.ticketId, d, c, sp), clear)} />}
       {p.perms.canResearch && <ResearchCard pending={pending} onSubmit={(d, c) => run("research", d === "accepted" ? "تم قبول الحالة" : "تم رفض الحالة وإغلاق التذكرة", () => decideResearch(p.ticketId, d, c))} />}
 
       {p.perms.canAct && !p.isDevice && (
@@ -160,16 +160,34 @@ function ResearchCard({ pending, onSubmit }: { pending: boolean; onSubmit: (d: "
 }
 
 function MersalDecisionCard({ pending, busy, onSubmit }: {
-  pending: boolean; busy: string | null; onSubmit: (d: "sponsor" | "exclude" | "close", c: string, clear: () => void) => void;
+  pending: boolean; busy: string | null;
+  onSubmit: (d: "sponsor" | "exclude" | "close", c: string, sponsor: { amount: string; duration: string } | undefined, clear: () => void) => void;
 }) {
   const [comment, setComment] = useState("");
+  const [sponsorOpen, setSponsorOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [duration, setDuration] = useState("");
   const short = comment.trim().length < 3;
-  const go = (d: "sponsor" | "exclude" | "close", ask?: string) => { if (ask && !confirm(ask)) return; onSubmit(d, comment, () => setComment("")); };
+  const clear = () => { setComment(""); setAmount(""); setDuration(""); setSponsorOpen(false); };
+  const go = (d: "exclude" | "close", ask: string) => { if (confirm(ask)) onSubmit(d, comment, undefined, clear); };
   return (
     <Card title="⚖️ قرار مرسال" tone="doctor">
       <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="اكتب القرار والتفاصيل — هيتضاف في سجل التذكرة (إلزامي في الاستبعاد والغلق)" className="min-h-[80px]" />
       <div className="mt-3 grid grid-cols-1 gap-2">
-        <Button type="button" variant="primary" loading={busy === "mersal-sponsor"} disabled={pending} onClick={() => go("sponsor")}>🤝 تكفل ← طبيب المتابعة</Button>
+        {!sponsorOpen ? (
+          <Button type="button" variant="primary" disabled={pending} onClick={() => setSponsorOpen(true)}>🤝 تكفل ← طبيب المتابعة</Button>
+        ) : (
+          <div className="animate-expand space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+            <p className="text-sm font-semibold text-emerald-900">🤝 بيانات التكفل</p>
+            <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="قيمة المساهمة (مثلًا: 1500 جنيه شهريًا)" autoFocus />
+            <Input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="مدة المساهمة (مثلًا: 6 شهور)" />
+            <div className="grid grid-cols-2 gap-2">
+              <Button type="button" variant="primary" loading={busy === "mersal-sponsor"} disabled={pending || !amount.trim() || !duration.trim()}
+                onClick={() => onSubmit("sponsor", comment, { amount, duration }, clear)}>تأكيد التكفل</Button>
+              <Button type="button" variant="ghost" disabled={pending} onClick={() => setSponsorOpen(false)}>إلغاء</Button>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <Button type="button" variant="danger" loading={busy === "mersal-exclude"} disabled={pending || short}
             onClick={() => go("exclude", "استبعاد الحالة؟ التذكرة هتروح لـ Admin الطوارئ يبلّغ الحالة.")}>🚫 استبعاد</Button>

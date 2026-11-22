@@ -464,7 +464,9 @@ export async function decideResearch(ticketId: string, decision: "accepted" | "r
 }
 
 // ─── قرار قرارات مرسال: تكفل ← طبيب المتابعة / استبعاد أو غلق ← Admin الطوارئ ───
-export async function decideMersal(ticketId: string, decision: MersalDecision, comment: string): Promise<Result> {
+export async function decideMersal(
+  ticketId: string, decision: MersalDecision, comment: string, sponsor?: { amount: string; duration: string },
+): Promise<Result> {
   return guard(async () => {
     const user = await requireUser();
     const { ticket, perms } = await loadWithPerms(user, ticketId);
@@ -472,6 +474,9 @@ export async function decideMersal(ticketId: string, decision: MersalDecision, c
     if (!(decision in MERSAL_DECISION_LABELS)) return { ok: false, error: "قرار غير صحيح" };
     const text = comment.trim();
     if (decision !== "sponsor" && text.length < 3) return { ok: false, error: "اكتب سبب القرار" };
+    const amount = decision === "sponsor" ? (sponsor?.amount ?? "").trim().slice(0, 200) : "";
+    const duration = decision === "sponsor" ? (sponsor?.duration ?? "").trim().slice(0, 200) : "";
+    if (decision === "sponsor" && (!amount || !duration)) return { ok: false, error: "اكتب قيمة المساهمة ومدتها" };
 
     const pair = await teamsByCode([TEAM.MERSAL_DECISIONS, mersalDecisionTarget(decision)]);
     const decisions = pair.find((t) => t.code === TEAM.MERSAL_DECISIONS)!;
@@ -487,19 +492,20 @@ export async function decideMersal(ticketId: string, decision: MersalDecision, c
         where: { id: ticketId },
         data: {
           mersalDecision: decision, mersalDecidedAt: now, mersalDecidedById: user.id,
+          sponsorAmount: amount || null, sponsorDuration: duration || null,
           receivedAt: null, receivedById: null, assignedToId: null,
           ...(newDeadline && { slaDeadline: newDeadline, slaBreachNotifiedAt: null }),
         },
       });
-      await tx.ticketComment.create({ data: { ticketId, authorId: user.id, kind: "note", body: `قرار مرسال: ${label}${text ? `\n${text}` : ""}` } });
-      await tx.ticketEvent.create({ data: { ticketId, actorId: user.id, action: "mersal_decision", metadata: { decision, label, to: target.name, comment: text || null } } });
+      await tx.ticketComment.create({ data: { ticketId, authorId: user.id, kind: "note", body: `قرار مرسال: ${label}${amount ? `\nقيمة المساهمة: ${amount}\nمدة المساهمة: ${duration}` : ""}${text ? `\n${text}` : ""}` } });
+      await tx.ticketEvent.create({ data: { ticketId, actorId: user.id, action: "mersal_decision", metadata: { decision, label, to: target.name, comment: text || null, ...(amount && { amount, duration }) } } });
     });
 
     await notify({
       userIds: await teamMemberIds([target.id], user.id),
       ticketId, type: "transfer",
       title: decision === "sponsor"
-        ? `✅ قرار مرسال: تكفل — ${ticket.ticketNumber} عند طبيب المتابعة`
+        ? `✅ قرار مرسال: تكفل (${amount} — ${duration}) — ${ticket.ticketNumber} عند طبيب المتابعة`
         : `📞 قرار مرسال: ${label} — بلّغ الحالة (${ticket.ticketNumber})`,
       body: text || undefined,
     });

@@ -13,7 +13,7 @@ export function describeEvent(action: string, metadata: unknown): string {
       `حُوِّلت من ${list(m.from) || "—"} إلى ${m.to}${m.slaHours ? ` — مهلة الإنجاز أصبحت ${m.slaHours} ساعة من وقت التحويل` : ""}`, m.note);
     case "triaged": return withNote(`صنّفها طبيب الخط الساخن حالةً ${m.level === "urgent" ? "عاجلة" : "طارئة"} ← ${list(m.to)}`, m.note);
     case "research_accepted": return withNote(`قبلت الأبحاث الحالة ← ${list(m.to)}`, m.comment);
-    case "mersal_decision": return withNote(`قرار مرسال: ${m.label ?? ""} ← ${m.to ?? ""}`, m.comment);
+    case "mersal_decision": return withNote(`قرار مرسال: ${m.label ?? ""}${m.amount ? ` (المساهمة: ${m.amount} — المدة: ${m.duration})` : ""} ← ${m.to ?? ""}`, m.comment);
     case "research_rejected": return withNote("رفضت الأبحاث الحالة وأُغلقت التذكرة", m.comment);
     case "closed": return withNote(`أُغلقت التذكرة${m.category ? ` — ${m.category}` : ""}`, m.reason);
     case "received": {
