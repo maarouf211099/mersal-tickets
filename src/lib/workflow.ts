@@ -139,6 +139,7 @@ export const TEAM = {
   WAREHOUSE: "WAREHOUSE",
   ENGINEERING: "ENGINEERING",
   PROCUREMENT: "PROCUREMENT",
+  EMERGENCY_ADMIN: "EMERGENCY_ADMIN",
 } as const;
 
 export type SeedTeam = {
@@ -161,6 +162,7 @@ export const DEFAULT_TEAMS: SeedTeam[] = [
   { code: TEAM.RECEPTION, name: "الاستقبال", color: "#059669", description: "مصدر إدخال", isReceiver: false },
   { code: TEAM.CLINICS, name: "العيادات", color: "#0891b2", description: "مصدر إدخال", isReceiver: false },
   { code: TEAM.MERSAL_DECISIONS, name: "قرارات مرسال", color: "#4f46e5", description: "قرارات مرسال", isReceiver: true },
+  { code: TEAM.EMERGENCY_ADMIN, name: "Admin الطوارئ", color: "#9f1239", description: "إبلاغ الحالات بقرار الاستبعاد أو الغلق", isReceiver: false },
   // الأجهزة الطبية
   { code: TEAM.WAREHOUSE, name: "المخزن", color: "#0f766e", description: "صرف واستلام الأجهزة الطبية", isReceiver: false },
   { code: TEAM.ENGINEERING, name: "الهندسية", color: "#475569", description: "فحص وصيانة الأجهزة الطبية", isReceiver: false },
@@ -231,6 +233,15 @@ export function identityError(nationality: string, nationalId: string, _unhcrNum
 
 // فريق الأبحاث: والتذكرة عنده، يقدر يرجّعها لطبيب الخط الساخن أو يحوّلها لقرارات مرسال بس
 export const RESEARCH_TRANSFER_CODES: string[] = [TEAM.HOTLINE_DOCTOR, TEAM.MERSAL_DECISIONS];
+// قرارات مرسال بتحوّل للفرق دي بس (والقرار نفسه بزراير تكفل / استبعاد / غلق)
+export const DECISIONS_TRANSFER_CODES: string[] = [TEAM.RESEARCH, TEAM.FOLLOWUP_DOCTOR, TEAM.HOTLINE_DOCTOR];
+
+export type MersalDecision = "sponsor" | "exclude" | "close";
+export const MERSAL_DECISION_LABELS: Record<MersalDecision, string> = { sponsor: "تكفل", exclude: "استبعاد", close: "غلق" };
+// التكفل ← طبيب المتابعة، الاستبعاد والغلق ← Admin الطوارئ يبلّغ الحالة
+export function mersalDecisionTarget(d: MersalDecision): string {
+  return d === "sponsor" ? TEAM.FOLLOWUP_DOCTOR : TEAM.EMERGENCY_ADMIN;
+}
 
 export function transferTargetsForTicket<T extends TeamLite>(
   teams: T[], actorTeamIds: string[], isManager: boolean, holderIds: string[],
@@ -238,6 +249,10 @@ export function transferTargetsForTicket<T extends TeamLite>(
   const research = teams.find((t) => t.code === TEAM.RESEARCH);
   if (!isManager && research && holderIds.includes(research.id) && actorTeamIds.includes(research.id)) {
     return teams.filter((t) => t.isActive && !holderIds.includes(t.id) && !!t.code && RESEARCH_TRANSFER_CODES.includes(t.code));
+  }
+  const decisions = teams.find((t) => t.code === TEAM.MERSAL_DECISIONS);
+  if (!isManager && decisions && holderIds.includes(decisions.id) && actorTeamIds.includes(decisions.id)) {
+    return teams.filter((t) => t.isActive && !holderIds.includes(t.id) && !!t.code && DECISIONS_TRANSFER_CODES.includes(t.code));
   }
   return transferTargets(teams, actorTeamIds, isManager, holderIds);
 }

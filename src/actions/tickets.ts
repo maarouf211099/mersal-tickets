@@ -15,6 +15,7 @@ import {
   EGYPTIAN, TEAM, TRIAGE_LABELS, identityError, normalizeDigits, parseMentions,
   GENDERS, OUTBOUND_EMERGENCY_SLA_MINUTES, researchOutcome, slaDeadlineAfterReceive, slaDeadlineAfterTransfer,
   slaDeadlineFor, transferTargets, transferTargetsForTicket, triageHolders,
+  MERSAL_DECISION_LABELS, mersalDecisionTarget, type MersalDecision,
 } from "@/lib/workflow";
 
 type Result = { ok: true; warning?: string } | { ok: false; error: string };
@@ -462,6 +463,51 @@ export async function decideResearch(ticketId: string, decision: "accepted" | "r
   });
 }
 
+// ─── قرار قرارات مرسال: تكفل ← طبيب المتابعة / استبعاد أو غلق ← Admin الطوارئ ───
+export async function decideMersal(ticketId: string, decision: MersalDecision, comment: string): Promise<Result> {
+  return guard(async () => {
+    const user = await requireUser();
+    const { ticket, perms } = await loadWithPerms(user, ticketId);
+    if (!perms.canMersalDecide) return { ok: false, error: "القرار من صلاحية فريق قرارات مرسال فقط" };
+    if (!(decision in MERSAL_DECISION_LABELS)) return { ok: false, error: "قرار غير صحيح" };
+    const text = comment.trim();
+    if (decision !== "sponsor" && text.length < 3) return { ok: false, error: "اكتب سبب القرار" };
+
+    const pair = await teamsByCode([TEAM.MERSAL_DECISIONS, mersalDecisionTarget(decision)]);
+    const decisions = pair.find((t) => t.code === TEAM.MERSAL_DECISIONS)!;
+    const target = pair.find((t) => t.code === mersalDecisionTarget(decision))!;
+    const label = MERSAL_DECISION_LABELS[decision];
+    const now = new Date();
+    const newDeadline = slaDeadlineAfterTransfer(ticket.type, target.code, now);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.ticketTeam.deleteMany({ where: { ticketId, teamId: decisions.id } });
+      await upsertHolder(tx, ticketId, target.id);
+      await tx.ticket.update({
+        where: { id: ticketId },
+        data: {
+          mersalDecision: decision, mersalDecidedAt: now, mersalDecidedById: user.id,
+          receivedAt: null, receivedById: null, assignedToId: null,
+          ...(newDeadline && { slaDeadline: newDeadline, slaBreachNotifiedAt: null }),
+        },
+      });
+      await tx.ticketComment.create({ data: { ticketId, authorId: user.id, kind: "note", body: `قرار مرسال: ${label}${text ? `\n${text}` : ""}` } });
+      await tx.ticketEvent.create({ data: { ticketId, actorId: user.id, action: "mersal_decision", metadata: { decision, label, to: target.name, comment: text || null } } });
+    });
+
+    await notify({
+      userIds: await teamMemberIds([target.id], user.id),
+      ticketId, type: "transfer",
+      title: decision === "sponsor"
+        ? `✅ قرار مرسال: تكفل — ${ticket.ticketNumber} عند طبيب المتابعة`
+        : `📞 قرار مرسال: ${label} — بلّغ الحالة (${ticket.ticketNumber})`,
+      body: text || undefined,
+    });
+    refresh(ticketId);
+    return { ok: true };
+  });
+}
+
 // ─── قفل / إعادة فتح ─────────────────────────────────────
 export async function closeTicket(ticketId: string, category: string, reason: string): Promise<Result> {
   return guard(async () => {
@@ -659,6 +705,7 @@ export async function getTicketForView(ticketId: string) {
       closedBy: { select: { fullName: true } },
       receivedBy: { select: { fullName: true } },
       researchDecidedBy: { select: { fullName: true } },
+      mersalDecidedBy: { select: { fullName: true } },
       comments: { orderBy: { createdAt: "asc" }, include: { author: { select: { fullName: true, username: true } } } },
       events: { orderBy: { createdAt: "asc" }, include: { actor: { select: { fullName: true } } } },
       attachments: { orderBy: { createdAt: "asc" }, include: { uploadedBy: { select: { fullName: true } } } },

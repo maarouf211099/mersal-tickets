@@ -177,6 +177,12 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                 {ticket.researchDecidedBy && <span className="text-xs text-slate-400"> — {displayName(ticket.researchDecidedBy.fullName)}</span>}
               </Info>
             )}
+            {ticket.mersalDecision && (
+              <Info label="قرار مرسال">
+                {{ sponsor: "🤝 تكفل", exclude: "🚫 استبعاد", close: "🔒 غلق" }[ticket.mersalDecision] ?? ticket.mersalDecision}
+                {ticket.mersalDecidedBy && <span className="text-xs text-slate-400"> — {displayName(ticket.mersalDecidedBy.fullName)}</span>}
+              </Info>
+            )}
           </div>
 
           {ticket.description && (

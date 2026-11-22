@@ -38,6 +38,7 @@ type TicketForAccess = {
   teamVisits?: { teamId: string }[];
   triageLevel: string | null;
   researchDecision: string | null;
+  type?: string;
   teams: { teamId: string; access: "holder" | "observer"; team: { code: string | null } }[];
   receivedAt?: Date | null;
 };
@@ -62,6 +63,8 @@ export function ticketPermissions(u: SessionUser, t: TicketForAccess) {
     canReopen: !pending && canView && (manager || u.canReopen),
     canTriage: canAct && holderCodes.includes(TEAM.HOTLINE_DOCTOR) && !t.triageLevel && memberOf(TEAM.HOTLINE_DOCTOR),
     canResearch: canAct && holderCodes.includes(TEAM.RESEARCH) && t.researchDecision === "pending" && memberOf(TEAM.RESEARCH),
+    // زراير قرارات مرسال (تكفل / استبعاد / غلق) — مش لطلبات الأجهزة (ليها مسار خاص)
+    canMersalDecide: canAct && holderCodes.includes(TEAM.MERSAL_DECISIONS) && t.type !== "device_request" && memberOf(TEAM.MERSAL_DECISIONS),
     canDelete: manager,
     // زرار "استلام": لأعضاء الفريق اللي عنده التيكت (والمدير)، مرة واحدة بعد كل تحويل
     canReceive: pending && writer && !t.receivedAt && (manager || holders.some((h) => u.teamIds.includes(h.teamId))),

@@ -134,6 +134,7 @@ model User {
   devicesAdded      Device[]           @relation("DeviceCreatedBy")
   deviceEvents      DeviceEvent[]
   researchDecisions Ticket[]           @relation("ResearchDecisions")
+  mersalDecisions   Ticket[]           @relation("MersalDecisions")
   comments          TicketComment[]
   events            TicketEvent[]
   attachments       Attachment[]
@@ -203,6 +204,11 @@ model Ticket {
   researchDecidedAt   DateTime?
   researchDecidedById String?
   researchDecidedBy   User?             @relation("ResearchDecisions", fields: [researchDecidedById], references: [id], onDelete: SetNull)
+  // قرار قرارات مرسال: sponsor (تكفل) / exclude (استبعاد) / close (غلق)
+  mersalDecision      String?
+  mersalDecidedAt     DateTime?
+  mersalDecidedById   String?
+  mersalDecidedBy     User?             @relation("MersalDecisions", fields: [mersalDecidedById], references: [id], onDelete: SetNull)
 
   teams             TicketTeam[]
   teamVisits        TicketTeamVisit[]

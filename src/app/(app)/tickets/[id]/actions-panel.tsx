@@ -7,13 +7,13 @@ import { DetailsFields, type DetailsDefaults } from "@/components/tickets/detail
 import { displayName } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import {
-  assignTicket, closeTicket, decideResearch, deleteTicket, receiveTicket, reopenTicket,
+  assignTicket, closeTicket, decideMersal, decideResearch, deleteTicket, receiveTicket, reopenTicket,
   transferTicket, triageTicket, updateTicketDetails,
 } from "@/actions/tickets";
 
 type Perms = {
   canAct: boolean; canClose: boolean; canReopen: boolean;
-  canTriage: boolean; canResearch: boolean; canDelete: boolean; canReceive: boolean;
+  canTriage: boolean; canResearch: boolean; canMersalDecide: boolean; canDelete: boolean; canReceive: boolean;
 };
 
 type Props = {
@@ -66,6 +66,8 @@ export function TicketActions(p: Props) {
       )}
 
       {p.perms.canTriage && <TriageCard pending={pending} onSubmit={(level, note) => run("triage", "تم تصنيف الحالة", () => triageTicket(p.ticketId, level, note))} />}
+      {p.perms.canMersalDecide && !p.isDevice && <MersalDecisionCard pending={pending} busy={busy}
+        onSubmit={(d, c, clear) => run(`mersal-${d}`, d === "sponsor" ? "تم التكفل — اتحوّلت لطبيب المتابعة" : "تم القرار — اتحوّلت لـ Admin الطوارئ لإبلاغ الحالة", () => decideMersal(p.ticketId, d, c), clear)} />}
       {p.perms.canResearch && <ResearchCard pending={pending} onSubmit={(d, c) => run("research", d === "accepted" ? "تم قبول الحالة" : "تم رفض الحالة وإغلاق التذكرة", () => decideResearch(p.ticketId, d, c))} />}
 
       {p.perms.canAct && !p.isDevice && (
@@ -153,6 +155,29 @@ function ResearchCard({ pending, onSubmit }: { pending: boolean; onSubmit: (d: "
         <Button type="button" variant="danger" disabled={pending || comment.trim().length < 3}
           onClick={() => { if (confirm("سيؤدي الرفض إلى إغلاق التذكرة. هل أنت متأكد؟")) onSubmit("rejected", comment); }}>❌ رفض وإغلاق</Button>
       </div>
+    </Card>
+  );
+}
+
+function MersalDecisionCard({ pending, busy, onSubmit }: {
+  pending: boolean; busy: string | null; onSubmit: (d: "sponsor" | "exclude" | "close", c: string, clear: () => void) => void;
+}) {
+  const [comment, setComment] = useState("");
+  const short = comment.trim().length < 3;
+  const go = (d: "sponsor" | "exclude" | "close", ask?: string) => { if (ask && !confirm(ask)) return; onSubmit(d, comment, () => setComment("")); };
+  return (
+    <Card title="⚖️ قرار مرسال" tone="doctor">
+      <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="اكتب القرار والتفاصيل — هيتضاف في سجل التذكرة (إلزامي في الاستبعاد والغلق)" className="min-h-[80px]" />
+      <div className="mt-3 grid grid-cols-1 gap-2">
+        <Button type="button" variant="primary" loading={busy === "mersal-sponsor"} disabled={pending} onClick={() => go("sponsor")}>🤝 تكفل ← طبيب المتابعة</Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button type="button" variant="danger" loading={busy === "mersal-exclude"} disabled={pending || short}
+            onClick={() => go("exclude", "استبعاد الحالة؟ التذكرة هتروح لـ Admin الطوارئ يبلّغ الحالة.")}>🚫 استبعاد</Button>
+          <Button type="button" variant="secondary" loading={busy === "mersal-close"} disabled={pending || short}
+            onClick={() => go("close", "غلق الحالة؟ التذكرة هتروح لـ Admin الطوارئ يبلّغ الحالة.")}>🔒 غلق</Button>
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">الاستبعاد والغلق بيروحوا لـ <b>Admin الطوارئ</b> يبلّغوا الحالة ويقفلوا التذكرة.</p>
     </Card>
   );
 }
