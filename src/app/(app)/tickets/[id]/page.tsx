@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { casesEnabled } from "@/lib/cases";
 import { prisma } from "@/lib/prisma";
 import { getTicketForView } from "@/actions/tickets";
 import { isManager } from "@/lib/access";
@@ -184,7 +185,8 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               </Info>
             )}
             {ticket.sponsorAmount && <Info label="قيمة المساهمة">{ticket.sponsorAmount}</Info>}
-            {ticket.sponsorDuration && <Info label="مدة المساهمة">{ticket.sponsorDuration}</Info>}
+            {ticket.sponsorRate && <Info label="معدل المساهمة">{ticket.sponsorRate}</Info>}
+            {ticket.researchRequestType && <Info label="نوع طلب الأبحاث">{ticket.researchRequestType}</Info>}
           </div>
 
           {ticket.description && (
@@ -359,7 +361,8 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           ticketId={ticket.id}
           perms={perms}
           isManager={isManager(user)}
-          targets={targets.map((t) => ({ id: t.id, name: t.name }))}
+          targets={targets.map((t) => ({ id: t.id, name: t.name, isResearch: t.code === TEAM.RESEARCH }))}
+          casesOn={casesEnabled()}
           assignable={assignable.map((p) => ({ id: p.id, fullName: p.fullName }))}
           assignedToId={ticket.assignedToId}
           isEmergency={ticket.type === "emergency"}

@@ -236,6 +236,8 @@ export const RESEARCH_TRANSFER_CODES: string[] = [TEAM.HOTLINE_DOCTOR, TEAM.MERS
 // قرارات مرسال بتحوّل للفرق دي بس (والقرار نفسه بزراير تكفل / استبعاد / غلق)
 export const DECISIONS_TRANSFER_CODES: string[] = [TEAM.RESEARCH, TEAM.FOLLOWUP_DOCTOR, TEAM.HOTLINE_DOCTOR];
 
+export const RESEARCH_REQUEST_TYPES = ["بحث", "إعادة مناقشة", "استبيان"] as const;
+
 export type MersalDecision = "sponsor" | "exclude" | "close";
 export const MERSAL_DECISION_LABELS: Record<MersalDecision, string> = { sponsor: "تكفل", exclude: "استبعاد", close: "غلق" };
 // التكفل ← طبيب المتابعة، الاستبعاد والغلق ← Admin الطوارئ يبلّغ الحالة

@@ -17,7 +17,8 @@ const TYPES: { key: TicketType; icon: string; on: string; check: string; hint: s
   { key: "follow_up", icon: "📋", on: "border-brand-400 bg-brand-50 shadow-brand-500/10", check: "bg-brand-500", hint: "متابعة حالة مسجَّلة من قبل" },
 ];
 
-export function NewTicketForm({ targets, defaultSource, sla }: {
+export function NewTicketForm({ targets, defaultSource, sla, casesOn = false }: {
+  casesOn?: boolean;
   targets: { id: string; name: string; color: string }[];
   defaultSource: string;
   sla: Record<TicketType, number>;
@@ -96,7 +97,7 @@ export function NewTicketForm({ targets, defaultSource, sla }: {
       </Step>
 
       <Step n={3} title="بيانات المستفيد">
-        <DetailsFields />
+        <DetailsFields casesOn={casesOn} />
       </Step>
 
       <Step n={4} title="المرفقات" optional>

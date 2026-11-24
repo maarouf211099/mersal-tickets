@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isManager } from "@/lib/access";
 import { SOURCE_BY_TEAM_CODE, transferTargets } from "@/lib/workflow";
 import { NewTicketForm } from "./form";
+import { casesEnabled } from "@/lib/cases";
 import { getSettings } from "@/lib/settings";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -21,6 +22,7 @@ export default async function NewTicketPage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <PageHeader icon="➕" title="تذكرة جديدة" subtitle="أدخل بيانات الحالة واختر الفريق الذي ستُحوَّل إليه" />
       <NewTicketForm
+        casesOn={casesEnabled()}
         targets={targets.map((t) => ({ id: t.id, name: t.name, color: t.color }))}
         defaultSource={defaultSource}
         sla={(await getSettings()).sla}

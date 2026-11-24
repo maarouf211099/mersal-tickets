@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/form";
 import { DetailsFields, type DetailsDefaults } from "@/components/tickets/details-fields";
 import { displayName } from "@/lib/utils";
+import { RESEARCH_REQUEST_TYPES } from "@/lib/workflow";
 import { toast } from "@/components/ui/toast";
 import {
   assignTicket, closeTicket, decideMersal, decideResearch, deleteTicket, receiveTicket, reopenTicket,
@@ -20,7 +21,8 @@ type Props = {
   ticketId: string;
   perms: Perms;
   isManager: boolean;
-  targets: { id: string; name: string }[];
+  targets: { id: string; name: string; isResearch?: boolean }[];
+  casesOn?: boolean;
   assignable: { id: string; fullName: string }[];
   assignedToId: string | null;
   details: DetailsDefaults;
@@ -72,7 +74,7 @@ export function TicketActions(p: Props) {
 
       {p.perms.canAct && !p.isDevice && (
         <TransferCard targets={p.targets} pending={pending} busy={busy === "transfer"}
-          onSubmit={(teamId, note, name, clear) => run("transfer", `تم التحويل إلى ${name}`, () => transferTicket(p.ticketId, teamId, note), clear)} />
+          onSubmit={(teamId, note, name, rType, clear) => run("transfer", `تم التحويل إلى ${name}${rType ? ` — ${rType}` : ""}`, () => transferTicket(p.ticketId, teamId, note, rType), clear)} />
       )}
 
       {p.perms.canAct && (
@@ -83,7 +85,7 @@ export function TicketActions(p: Props) {
       )}
 
       {p.perms.canAct && !p.isDevice && (
-        <EditCard details={p.details} pending={pending} busy={busy === "edit"}
+        <EditCard details={p.details} casesOn={p.casesOn} pending={pending} busy={busy === "edit"}
           onSubmit={(form, close) => run("edit", "تم حفظ التعديلات", () => updateTicketDetails(p.ticketId, form), close)} />
       )}
 
@@ -161,14 +163,14 @@ function ResearchCard({ pending, onSubmit }: { pending: boolean; onSubmit: (d: "
 
 function MersalDecisionCard({ pending, busy, onSubmit }: {
   pending: boolean; busy: string | null;
-  onSubmit: (d: "sponsor" | "exclude" | "close", c: string, sponsor: { amount: string; duration: string } | undefined, clear: () => void) => void;
+  onSubmit: (d: "sponsor" | "exclude" | "close", c: string, sponsor: { amount: string; rate: string } | undefined, clear: () => void) => void;
 }) {
   const [comment, setComment] = useState("");
   const [sponsorOpen, setSponsorOpen] = useState(false);
   const [amount, setAmount] = useState("");
-  const [duration, setDuration] = useState("");
+  const [rate, setRate] = useState("");
   const short = comment.trim().length < 3;
-  const clear = () => { setComment(""); setAmount(""); setDuration(""); setSponsorOpen(false); };
+  const clear = () => { setComment(""); setAmount(""); setRate(""); setSponsorOpen(false); };
   const go = (d: "exclude" | "close", ask: string) => { if (confirm(ask)) onSubmit(d, comment, undefined, clear); };
   return (
     <Card title="⚖️ قرار مرسال" tone="doctor">
@@ -180,10 +182,10 @@ function MersalDecisionCard({ pending, busy, onSubmit }: {
           <div className="animate-expand space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
             <p className="text-sm font-semibold text-emerald-900">🤝 بيانات التكفل</p>
             <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="قيمة المساهمة (مثلًا: 1500 جنيه شهريًا)" autoFocus />
-            <Input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="مدة المساهمة (مثلًا: 6 شهور)" />
+            <Input value={rate} onChange={(e) => setRate(e.target.value)} placeholder="معدل المساهمة (مثلًا: شهريًا / كل 3 شهور / مرة واحدة)" />
             <div className="grid grid-cols-2 gap-2">
-              <Button type="button" variant="primary" loading={busy === "mersal-sponsor"} disabled={pending || !amount.trim() || !duration.trim()}
-                onClick={() => onSubmit("sponsor", comment, { amount, duration }, clear)}>تأكيد التكفل</Button>
+              <Button type="button" variant="primary" loading={busy === "mersal-sponsor"} disabled={pending || !amount.trim() || !rate.trim()}
+                onClick={() => onSubmit("sponsor", comment, { amount, rate }, clear)}>تأكيد التكفل</Button>
               <Button type="button" variant="ghost" disabled={pending} onClick={() => setSponsorOpen(false)}>إلغاء</Button>
             </div>
           </div>
@@ -201,20 +203,34 @@ function MersalDecisionCard({ pending, busy, onSubmit }: {
 }
 
 function TransferCard({ targets, pending, busy, onSubmit }: {
-  targets: { id: string; name: string }[]; pending: boolean; busy: boolean;
-  onSubmit: (teamId: string, note: string, name: string, clear: () => void) => void;
+  targets: { id: string; name: string; isResearch?: boolean }[]; pending: boolean; busy: boolean;
+  onSubmit: (teamId: string, note: string, name: string, researchType: string | undefined, clear: () => void) => void;
 }) {
   const [teamId, setTeamId] = useState("");
   const [note, setNote] = useState("");
+  const [rType, setRType] = useState("");
+  const target = targets.find((t) => t.id === teamId);
+  const needType = !!target?.isResearch;
   return (
     <Card title="التحويل إلى فريق آخر" icon="↪️">
-      <Select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+      <Select value={teamId} onChange={(e) => { setTeamId(e.target.value); setRType(""); }}>
         <option value="">اختر الفريق...</option>
         {targets.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
       </Select>
+      {needType && (
+        <div className="animate-expand mt-2">
+          <p className="mb-1.5 text-xs font-semibold text-slate-600">نوع الطلب للأبحاث <span className="text-red-500">*</span></p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {RESEARCH_REQUEST_TYPES.map((x) => (
+              <button key={x} type="button" onClick={() => setRType(x)} aria-pressed={rType === x}
+                className={`rounded-lg border px-2 py-2 text-sm transition ${rType === x ? "border-amber-500 bg-amber-50 font-semibold text-amber-900" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>{x}</button>
+            ))}
+          </div>
+        </div>
+      )}
       <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="سبب التحويل / ملاحظة (اختياري)" className="mt-2 min-h-[60px]" />
-      <Button type="button" className="mt-2 w-full" disabled={pending || !teamId} loading={busy}
-        onClick={() => onSubmit(teamId, note, targets.find((t) => t.id === teamId)?.name ?? "", () => { setTeamId(""); setNote(""); })}>تحويل</Button>
+      <Button type="button" className="mt-2 w-full" disabled={pending || !teamId || (needType && !rType)} loading={busy}
+        onClick={() => onSubmit(teamId, note, target?.name ?? "", needType ? rType : undefined, () => { setTeamId(""); setNote(""); setRType(""); })}>تحويل</Button>
     </Card>
   );
 }
@@ -234,8 +250,8 @@ function AssignForm({ assignable, current, pending, busy, onSave }: {
   );
 }
 
-function EditCard({ details, pending, busy, onSubmit }: {
-  details: DetailsDefaults; pending: boolean; busy: boolean; onSubmit: (form: FormData, close: () => void) => void;
+function EditCard({ details, casesOn, pending, busy, onSubmit }: {
+  details: DetailsDefaults; casesOn?: boolean; pending: boolean; busy: boolean; onSubmit: (form: FormData, close: () => void) => void;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -244,7 +260,7 @@ function EditCard({ details, pending, busy, onSubmit }: {
         <Button type="button" variant="secondary" className="w-full" onClick={() => setOpen(true)}>✏️ تعديل البيانات</Button>
       ) : (
         <form className="animate-expand" onSubmit={(e) => { e.preventDefault(); onSubmit(new FormData(e.currentTarget), () => setOpen(false)); }}>
-          <DetailsFields d={details} />
+          <DetailsFields d={details} casesOn={casesOn} />
           <div className="mt-3 flex gap-2">
             <Button type="submit" disabled={pending} loading={busy}>حفظ</Button>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>إلغاء</Button>

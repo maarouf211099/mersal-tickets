@@ -15,7 +15,7 @@ import {
   EGYPTIAN, TEAM, TRIAGE_LABELS, identityError, normalizeDigits, parseMentions,
   GENDERS, OUTBOUND_EMERGENCY_SLA_MINUTES, researchOutcome, slaDeadlineAfterReceive, slaDeadlineAfterTransfer,
   slaDeadlineFor, transferTargets, transferTargetsForTicket, triageHolders,
-  MERSAL_DECISION_LABELS, mersalDecisionTarget, type MersalDecision,
+  MERSAL_DECISION_LABELS, RESEARCH_REQUEST_TYPES, mersalDecisionTarget, type MersalDecision,
 } from "@/lib/workflow";
 
 type Result = { ok: true; warning?: string } | { ok: false; error: string };
@@ -304,7 +304,7 @@ export async function addComment(ticketId: string, kind: "update" | "note", body
 }
 
 // ─── تحويل لتيم تاني ──────────────────────────────────────
-export async function transferTicket(ticketId: string, targetTeamId: string, note: string): Promise<Result> {
+export async function transferTicket(ticketId: string, targetTeamId: string, note: string, researchType?: string): Promise<Result> {
   return guard(async () => {
     const user = await requireUser();
     const { ticket, perms } = await loadWithPerms(user, ticketId);
@@ -316,6 +316,11 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
     const target = transferTargetsForTicket(allTeams, user.teamIds, isManager(user), holders.map((h) => h.teamId))
       .find((t) => t.id === targetTeamId);
     if (!target) return { ok: false, error: "لا يُسمح لك بالتحويل إلى هذا الفريق" };
+    const toResearch = target.code === TEAM.RESEARCH;
+    const rType = toResearch ? (researchType ?? "").trim() : "";
+    if (toResearch && !(RESEARCH_REQUEST_TYPES as readonly string[]).includes(rType)) {
+      return { ok: false, error: "اختار نوع الطلب للأبحاث: بحث أو إعادة مناقشة أو استبيان" };
+    }
 
     // التيمات اللي بتسلّم: تيمات المستخدم اللي ماسكة التيكت — ولو هو مش منها (أو مدير) كل الماسكين
     const mineHolding = holders.filter((h) => user.teamIds.includes(h.teamId));
@@ -344,6 +349,7 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
         where: { id: ticketId },
         data: {
           assignedToId: null, receivedAt: null, receivedById: null, ...medicalReset,
+          ...(toResearch && { researchRequestType: rType }),
           ...(newDeadline && { slaDeadline: newDeadline, slaBreachNotifiedAt: null }),
         },
       }),
@@ -352,6 +358,7 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
           ticketId, actorId: user.id, action: "transferred",
           metadata: {
             from: from.map((h) => h.team.name), to: target.name, note: note.trim() || null,
+            ...(toResearch && { researchType: rType }),
             ...(newDeadline && { slaHours: OUTBOUND_EMERGENCY_SLA_MINUTES / 60 }),
           },
         },
@@ -361,7 +368,7 @@ export async function transferTicket(ticketId: string, targetTeamId: string, not
     await notify({
       userIds: await teamMemberIds([target.id], user.id),
       ticketId, type: "transferred",
-      title: `${ticket.type === "emergency" ? "🚨 " : ""}حُوِّلت التذكرة ${ticket.ticketNumber} إلى ${target.name}`,
+      title: `${ticket.type === "emergency" ? "🚨 " : ""}حُوِّلت التذكرة ${ticket.ticketNumber} إلى ${target.name}${rType ? ` — ${rType}` : ""}`,
       body: note.trim() || undefined,
     });
     refresh(ticketId);
@@ -385,7 +392,7 @@ export async function triageTicket(ticketId: string, level: "emergency" | "urgen
       for (const t of targets) await upsertHolder(tx, ticketId, t.id);
       await tx.ticket.update({
         where: { id: ticketId },
-        data: { triageLevel: level, researchDecision: "pending", assignedToId: null, receivedAt: null, receivedById: null },
+        data: { triageLevel: level, researchDecision: "pending", researchRequestType: "بحث", assignedToId: null, receivedAt: null, receivedById: null },
       });
       await tx.ticketEvent.create({
         data: {
@@ -465,7 +472,7 @@ export async function decideResearch(ticketId: string, decision: "accepted" | "r
 
 // ─── قرار قرارات مرسال: تكفل ← طبيب المتابعة / استبعاد أو غلق ← Admin الطوارئ ───
 export async function decideMersal(
-  ticketId: string, decision: MersalDecision, comment: string, sponsor?: { amount: string; duration: string },
+  ticketId: string, decision: MersalDecision, comment: string, sponsor?: { amount: string; rate: string },
 ): Promise<Result> {
   return guard(async () => {
     const user = await requireUser();
@@ -475,8 +482,8 @@ export async function decideMersal(
     const text = comment.trim();
     if (decision !== "sponsor" && text.length < 3) return { ok: false, error: "اكتب سبب القرار" };
     const amount = decision === "sponsor" ? (sponsor?.amount ?? "").trim().slice(0, 200) : "";
-    const duration = decision === "sponsor" ? (sponsor?.duration ?? "").trim().slice(0, 200) : "";
-    if (decision === "sponsor" && (!amount || !duration)) return { ok: false, error: "اكتب قيمة المساهمة ومدتها" };
+    const rate = decision === "sponsor" ? (sponsor?.rate ?? "").trim().slice(0, 200) : "";
+    if (decision === "sponsor" && (!amount || !rate)) return { ok: false, error: "اكتب قيمة المساهمة ومعدلها" };
 
     const pair = await teamsByCode([TEAM.MERSAL_DECISIONS, mersalDecisionTarget(decision)]);
     const decisions = pair.find((t) => t.code === TEAM.MERSAL_DECISIONS)!;
@@ -492,20 +499,20 @@ export async function decideMersal(
         where: { id: ticketId },
         data: {
           mersalDecision: decision, mersalDecidedAt: now, mersalDecidedById: user.id,
-          sponsorAmount: amount || null, sponsorDuration: duration || null,
+          sponsorAmount: amount || null, sponsorRate: rate || null,
           receivedAt: null, receivedById: null, assignedToId: null,
           ...(newDeadline && { slaDeadline: newDeadline, slaBreachNotifiedAt: null }),
         },
       });
-      await tx.ticketComment.create({ data: { ticketId, authorId: user.id, kind: "note", body: `قرار مرسال: ${label}${amount ? `\nقيمة المساهمة: ${amount}\nمدة المساهمة: ${duration}` : ""}${text ? `\n${text}` : ""}` } });
-      await tx.ticketEvent.create({ data: { ticketId, actorId: user.id, action: "mersal_decision", metadata: { decision, label, to: target.name, comment: text || null, ...(amount && { amount, duration }) } } });
+      await tx.ticketComment.create({ data: { ticketId, authorId: user.id, kind: "note", body: `قرار مرسال: ${label}${amount ? `\nقيمة المساهمة: ${amount}\nمعدل المساهمة: ${rate}` : ""}${text ? `\n${text}` : ""}` } });
+      await tx.ticketEvent.create({ data: { ticketId, actorId: user.id, action: "mersal_decision", metadata: { decision, label, to: target.name, comment: text || null, ...(amount && { amount, rate }) } } });
     });
 
     await notify({
       userIds: await teamMemberIds([target.id], user.id),
       ticketId, type: "transfer",
       title: decision === "sponsor"
-        ? `✅ قرار مرسال: تكفل (${amount} — ${duration}) — ${ticket.ticketNumber} عند طبيب المتابعة`
+        ? `✅ قرار مرسال: تكفل (${amount} — ${rate}) — ${ticket.ticketNumber} عند طبيب المتابعة`
         : `📞 قرار مرسال: ${label} — بلّغ الحالة (${ticket.ticketNumber})`,
       body: text || undefined,
     });

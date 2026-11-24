@@ -206,9 +206,11 @@ model Ticket {
   researchDecidedBy   User?             @relation("ResearchDecisions", fields: [researchDecidedById], references: [id], onDelete: SetNull)
   // قرار قرارات مرسال: sponsor (تكفل) / exclude (استبعاد) / close (غلق)
   mersalDecision      String?
-  // التكفل: قيمة المساهمة ومدتها (نص حر)
+  // التكفل: قيمة المساهمة ومعدلها (نص حر)
   sponsorAmount       String?
-  sponsorDuration     String?
+  sponsorRate         String?
+  // نوع الطلب لما التذكرة تتحول للأبحاث: بحث / إعادة مناقشة / استبيان
+  researchRequestType String?
   mersalDecidedAt     DateTime?
   mersalDecidedById   String?
   mersalDecidedBy     User?             @relation("MersalDecisions", fields: [mersalDecidedById], references: [id], onDelete: SetNull)
