@@ -50,15 +50,15 @@ function netReason(e: unknown, url: string): string {
 
 const TIMEOUT_MS = 45_000;
 
-export async function fetchCasePatient(code: string): Promise<CasePatient> {
+// GET على سيستم الحالات — CASES_URL ممكن يبقى أكتر من عنوان مفصولين بفاصلة (بيجرّبهم بالترتيب لو الاتصال فشل)
+async function casesGet<T>(path: string): Promise<T> {
   if (!casesEnabled()) throw new Error("ربط سيستم الحالات غير مفعّل على السيرفر بعد");
-  // CASES_URL ممكن يبقى أكتر من عنوان مفصولين بفاصلة — بيجرّبهم بالترتيب لو الاتصال فشل
   const bases = process.env.CASES_URL!.split(",").map((u) => u.trim().replace(/\/+$/, "")).filter(Boolean);
   let r: Response | null = null;
   const reasons: string[] = [];
   for (const base of bases) {
     try {
-      r = await fetch(`${base}/api/cases/${encodeURIComponent(code)}`, {
+      r = await fetch(`${base}${path}`, {
         headers: { "x-api-key": process.env.CASES_API_KEY!.trim(), accept: "application/json" },
         cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS),
       });
@@ -70,10 +70,48 @@ export async function fetchCasePatient(code: string): Promise<CasePatient> {
     }
   }
   if (!r) throw new Error(`مش قادر يوصل لسيستم الحالات — ${reasons.join(" / ")}`);
-  const j = (await r.json().catch(() => ({}))) as CaseResponse;
+  const j = (await r.json().catch(() => ({}))) as T & { error?: string };
   if (r.status === 401 || r.status === 403) throw new Error(j.error ? `سيستم الحالات رفض المفتاح: ${j.error}` : "مفتاح سيستم الحالات غير صالح — راجع CASES_API_KEY");
   if (r.status === 404) throw new Error(j.error || "الكود ده مش موجود في سيستم الحالات");
   if (!r.ok || j.error) throw new Error(j.error || `سيستم الحالات رجّع خطأ (${r.status})`);
+  return j;
+}
+
+// ─── آخر البحوث وآخر القرارات (للعرض في صفحة التذكرة) ───
+export type CaseHistoryItem = { text: string; extra: string | null; date: string | null; author: string | null };
+export type CaseHistory = { code: string; name: string; decisions: CaseHistoryItem[]; investigations: CaseHistoryItem[] };
+
+type RawDecision = { text?: string | null; date?: string | null; author?: string | null };
+type RawInvestigation = {
+  conclusions?: string | null; recommendation?: string | null; date?: string | null;
+  author?: string | null; researcher?: string | null;
+};
+const HISTORY_LIMIT = 5;
+const byNewest = (a: { date: string | null }, b: { date: string | null }) =>
+  (b.date ? Date.parse(b.date) || 0 : 0) - (a.date ? Date.parse(a.date) || 0 : 0);
+const clip = (v: string | null | undefined, n = 3000) => { const t = (v ?? "").toString().trim(); return t.length > n ? `${t.slice(0, n)}…` : t; };
+
+export async function fetchCaseHistory(code: string): Promise<CaseHistory> {
+  const enc = encodeURIComponent(code);
+  // البحوث القديمة والقرارات من جدول القرارات بتيجي من المرحلة التانية (extras) — لو فشلت نكمّل باللي في الأساسية
+  const [core, ex] = await Promise.all([
+    casesGet<CaseResponse & { investigations?: RawInvestigation[] }>(`/api/cases/${enc}`),
+    casesGet<{ extras?: { investigations?: RawInvestigation[]; qararat?: RawDecision[] } | null }>(`/api/cases/${enc}/extras`).catch(() => null),
+  ]);
+  const seen = new Set<string>();
+  const decisions = [...(core.decisions ?? []), ...(ex?.extras?.qararat ?? [])]
+    .map((d: RawDecision) => ({ text: clip(d.text), extra: null, date: d.date ?? null, author: clean(d.author) }))
+    .filter((d) => d.text && !seen.has(`${d.text}|${d.date}`) && seen.add(`${d.text}|${d.date}`))
+    .sort(byNewest).slice(0, HISTORY_LIMIT);
+  const investigations = (ex?.extras?.investigations ?? core.investigations ?? [])
+    .map((x) => ({ text: clip(x.conclusions), extra: clip(x.recommendation) || null, date: x.date ?? null, author: clean(x.researcher) ?? clean(x.author) }))
+    .filter((x) => x.text || x.extra)
+    .sort(byNewest).slice(0, HISTORY_LIMIT);
+  return { code: String(core.code ?? code), name: clean(core.name) ?? "", decisions, investigations };
+}
+
+export async function fetchCasePatient(code: string): Promise<CasePatient> {
+  const j = await casesGet<CaseResponse>(`/api/cases/${encodeURIComponent(code)}`);
 
   const basic = j.profile?.basic ?? [];
   const get = (...labels: string[]) => clean(basic.find((b) => labels.includes(b.label))?.value);

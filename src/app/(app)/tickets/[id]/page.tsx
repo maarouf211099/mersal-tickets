@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { casesEnabled } from "@/lib/cases";
+import { CaseHistoryCard } from "@/components/tickets/case-history";
 import { prisma } from "@/lib/prisma";
 import { getTicketForView } from "@/actions/tickets";
 import { isManager } from "@/lib/access";
@@ -209,6 +210,8 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           )}
           </div>
         </div>
+
+        {casesEnabled() && ticket.caseCode?.trim() && <CaseHistoryCard ticketId={ticket.id} caseCode={ticket.caseCode.trim()} />}
 
         {(ambReqs.length > 0 || canAmbulance) && (
           <div className="card p-6">

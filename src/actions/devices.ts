@@ -9,7 +9,7 @@ import { isManager, ticketScope } from "@/lib/access";
 import { logSystem } from "@/lib/audit";
 import { notify, teamMemberIds } from "@/lib/notify";
 import { nextTicketNumber } from "@/lib/ticket-number";
-import { fetchCasePatient, type CasePatient } from "@/lib/cases";
+import { fetchCaseHistory, fetchCasePatient, type CaseHistory, type CasePatient } from "@/lib/cases";
 import {
   DEVICE_STAGE_LABELS, DEVICE_STAGE_TEAM, DEVICE_STATUS_LABELS, DEVICE_TYPES, GENDERS, NO_SLA_DEADLINE, TEAM,
   deviceDecisionOutcome, normalizeDigits, type DeviceStage, type DeviceStatus,
@@ -52,6 +52,18 @@ export async function lookupCasePatient(code: string): Promise<{ ok: true; data:
     const c = normalizeDigits(String(code ?? "")).trim();
     if (!c) return { ok: false, error: "اكتب كود المريض" };
     return { ok: true, data: await fetchCasePatient(c) };
+  } catch (e) { return fail(e); }
+}
+
+// آخر البحوث والقرارات من سيستم الحالات لتذكرة — بكود الحالة المسجل عليها، ولمن يقدر يشوف التذكرة بس
+export async function lookupCaseHistory(ticketId: string): Promise<{ ok: true; data: CaseHistory } | { ok: false; error: string }> {
+  try {
+    const user = await requireUser();
+    const t = await prisma.ticket.findFirst({ where: { AND: [{ id: ticketId }, ticketScope(user)] }, select: { caseCode: true } });
+    const c = normalizeDigits(t?.caseCode ?? "").trim();
+    if (!t) return { ok: false, error: "التذكرة غير موجودة" };
+    if (!c) return { ok: false, error: "التذكرة مفيهاش كود حالة" };
+    return { ok: true, data: await fetchCaseHistory(c) };
   } catch (e) { return fail(e); }
 }
 
