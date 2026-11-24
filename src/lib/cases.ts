@@ -36,19 +36,43 @@ function normGender(v: string | null) {
   return null;
 }
 
+// سبب فشل الاتصال بالعربي — علشان نعرف المشكلة من رسالة الموظف
+function netReason(e: unknown, url: string): string {
+  const err = e as { name?: string; cause?: { code?: string; message?: string }; message?: string };
+  const code = err?.cause?.code ?? "";
+  if (err?.name === "TimeoutError" || err?.name === "AbortError") return `سيستم الحالات اتأخر أكتر من ${TIMEOUT_MS / 1000} ثانية (${url})`;
+  if (code === "ECONNREFUSED") return `مفيش حاجة شغالة على ${url} — العنوان أو البورت غلط أو سيستم الحالات واقف (ECONNREFUSED)`;
+  if (code === "ENOTFOUND" || code === "EAI_AGAIN") return `اسم السيرفر مش معروف (${url})`;
+  if (code.startsWith("ERR_TLS") || /certificate|SSL|TLS/i.test(err?.cause?.message ?? "")) return `مشكلة شهادة HTTPS مع ${url} — جرّب http://127.0.0.1:4000`;
+  if (code === "ECONNRESET" || code === "UND_ERR_SOCKET") return `الاتصال اتقفل من ناحية سيستم الحالات (${url})`;
+  return `${code || err?.message || "خطأ غير معروف"} (${url})`;
+}
+
+const TIMEOUT_MS = 45_000;
+
 export async function fetchCasePatient(code: string): Promise<CasePatient> {
   if (!casesEnabled()) throw new Error("ربط سيستم الحالات غير مفعّل على السيرفر بعد");
-  const base = process.env.CASES_URL!.replace(/\/+$/, "");
-  let r: Response;
-  try {
-    r = await fetch(`${base}/api/cases/${encodeURIComponent(code)}`, {
-      headers: { "x-api-key": process.env.CASES_API_KEY! }, cache: "no-store", signal: AbortSignal.timeout(20_000),
-    });
-  } catch {
-    throw new Error("سيستم الحالات لا يستجيب حاليًا — املأ البيانات يدويًا أو حاول بعد قليل");
+  // CASES_URL ممكن يبقى أكتر من عنوان مفصولين بفاصلة — بيجرّبهم بالترتيب لو الاتصال فشل
+  const bases = process.env.CASES_URL!.split(",").map((u) => u.trim().replace(/\/+$/, "")).filter(Boolean);
+  let r: Response | null = null;
+  const reasons: string[] = [];
+  for (const base of bases) {
+    try {
+      r = await fetch(`${base}/api/cases/${encodeURIComponent(code)}`, {
+        headers: { "x-api-key": process.env.CASES_API_KEY!.trim(), accept: "application/json" },
+        cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      break;
+    } catch (e) {
+      const why = netReason(e, base);
+      console.error("[mersal-tickets] cases lookup failed:", why, e);
+      reasons.push(why);
+    }
   }
+  if (!r) throw new Error(`مش قادر يوصل لسيستم الحالات — ${reasons.join(" / ")}`);
   const j = (await r.json().catch(() => ({}))) as CaseResponse;
-  if (r.status === 401 || r.status === 403) throw new Error("مفتاح سيستم الحالات غير صالح — راجع CASES_API_KEY");
+  if (r.status === 401 || r.status === 403) throw new Error(j.error ? `سيستم الحالات رفض المفتاح: ${j.error}` : "مفتاح سيستم الحالات غير صالح — راجع CASES_API_KEY");
+  if (r.status === 404) throw new Error(j.error || "الكود ده مش موجود في سيستم الحالات");
   if (!r.ok || j.error) throw new Error(j.error || `سيستم الحالات رجّع خطأ (${r.status})`);
 
   const basic = j.profile?.basic ?? [];
