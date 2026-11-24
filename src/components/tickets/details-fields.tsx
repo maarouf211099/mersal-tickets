@@ -60,6 +60,20 @@ export function DetailsFields({ d = {}, casesOn = false }: { d?: DetailsDefaults
 
   return (
     <div ref={root} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="md:col-span-2 rounded-xl border border-sky-200 bg-sky-50/40 p-3">
+        <Label htmlFor="caseCode">كود الحالة {casesOn && <span className="text-xs font-normal text-slate-500">— اكتبه الأول ودوس Enter أو «جلب» علشان باقي البيانات تتملا لوحدها</span>}</Label>
+        <div className="flex gap-2">
+          <Input id="caseCode" name="caseCode" dir="ltr" defaultValue={d.caseCode ?? ""} placeholder="مثلًا 12345" className="bg-white"
+            onKeyDown={(e) => { if (casesOn && e.key === "Enter") { e.preventDefault(); fetchCase(); } }} />
+          {casesOn && (
+            <button type="button" onClick={fetchCase} disabled={fetching} title="يجيب الاسم والسن والنوع والتليفونات والعنوان والجنسية وآخر قرار"
+              className="shrink-0 whitespace-nowrap rounded-lg border border-sky-300 bg-sky-50 px-3 text-sm font-medium text-sky-800 transition hover:bg-sky-100 disabled:opacity-60">
+              {fetching ? "جاري الجلب…" : "🔎 جلب من سيستم الحالات"}
+            </button>
+          )}
+        </div>
+        {filled > 0 && <p className="mt-1 text-xs text-sky-700">الخانات الملوّنة اتملت من سيستم الحالات — تقدر تعدّل أي حاجة.</p>}
+      </div>
       <div className="md:col-span-2">
         <Label htmlFor="beneficiaryName" required>الاسم</Label>
         <Input id="beneficiaryName" name="beneficiaryName" required defaultValue={d.beneficiaryName} />
@@ -86,20 +100,6 @@ export function DetailsFields({ d = {}, casesOn = false }: { d?: DetailsDefaults
       <div>
         <Label htmlFor="phone2">رقم الهاتف الثاني</Label>
         <Input id="phone2" name="phone2" inputMode="tel" dir="ltr" defaultValue={d.phone2 ?? ""} />
-      </div>
-      <div>
-        <Label htmlFor="caseCode">كود الحالة</Label>
-        <div className="flex gap-2">
-          <Input id="caseCode" name="caseCode" dir="ltr" defaultValue={d.caseCode ?? ""}
-            onKeyDown={(e) => { if (casesOn && e.key === "Enter") { e.preventDefault(); fetchCase(); } }} />
-          {casesOn && (
-            <button type="button" onClick={fetchCase} disabled={fetching} title="يجيب الاسم والسن والنوع والتليفونات والعنوان والجنسية وآخر قرار"
-              className="shrink-0 whitespace-nowrap rounded-lg border border-sky-300 bg-sky-50 px-3 text-sm font-medium text-sky-800 transition hover:bg-sky-100 disabled:opacity-60">
-              {fetching ? "جاري الجلب…" : "🔎 جلب من سيستم الحالات"}
-            </button>
-          )}
-        </div>
-        {filled > 0 && <p className="mt-1 text-xs text-sky-700">الخانات الملوّنة اتملت من سيستم الحالات — تقدر تعدّل أي حاجة.</p>}
       </div>
       <div>
         <Label htmlFor="relationship" required>صلة القرابة</Label>
