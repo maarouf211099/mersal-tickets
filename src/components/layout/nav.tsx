@@ -15,6 +15,7 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
   const [unread, setUnread] = useState(initialUnread);
   const [toast, setToast] = useState<{ title: string; body?: string; ticketId?: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -104,13 +105,12 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
 
   return (
     <>
-      <nav className={cn("sticky top-0 z-40 border-b backdrop-blur-md transition-all duration-300",
-        scrolled ? "border-slate-200 bg-white/85 shadow-md shadow-slate-900/5" : "border-slate-200/80 bg-white/95 shadow-sm")}>
-        <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 sm:px-6 h-16">
+      <nav className={cn("nav-ink sticky top-0 z-40 transition-all duration-300 no-print", scrolled && "shadow-lg shadow-ink-950/30")}>
+        <div className="mx-auto flex max-w-[1400px] items-center gap-2 px-4 sm:px-6 h-16">
           {/* Logo */}
           <Link href="/dashboard" className="shrink-0 group">
             <div className="transition-transform duration-200 group-hover:scale-105">
-              <Logo />
+              <Logo onDark />
             </div>
           </Link>
 
@@ -122,7 +122,7 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
           </div>
 
           {/* Divider */}
-          <div className="hidden lg:block h-6 w-px bg-slate-200" />
+          <div className="hidden lg:block h-6 w-px bg-white/15" />
 
           {/* Utility Navigation */}
           <div className="hidden lg:flex items-center gap-1">
@@ -131,16 +131,31 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
             ))}
           </div>
 
-          {/* Admin Section */}
+          {/* Admin Section — قائمة واحدة «الإدارة» بدل أيقونات كتير */}
           {adminNav.length > 0 && (
-            <>
-              <div className="hidden lg:block h-6 w-px bg-slate-200" />
-              <div className="hidden lg:flex items-center gap-1">
-                {adminNav.map((it) => (
-                  <NavLink key={it.href} {...it} active={isActive(it.href)} />
-                ))}
-              </div>
-            </>
+            <div className="relative hidden lg:block">
+              <button type="button" onClick={() => setAdminOpen(!adminOpen)} aria-expanded={adminOpen}
+                className={cn("flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                  adminNav.some((it) => isActive(it.href)) ? "bg-white/15 text-white" : "text-white/75 hover:bg-white/10 hover:text-white")}>
+                <GearIcon className="h-4 w-4" />
+                <span className="hidden xl:inline">الإدارة</span>
+                <svg viewBox="0 0 24 24" className={cn("h-3.5 w-3.5 opacity-70 transition-transform", adminOpen && "rotate-180")} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              {adminOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setAdminOpen(false)} />
+                  <div className="absolute right-0 top-12 z-50 w-52 animate-fade-in-up rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl shadow-ink-950/20">
+                    {adminNav.map((it) => (
+                      <Link key={it.href} href={it.href} onClick={() => setAdminOpen(false)}
+                        className={cn("flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                          isActive(it.href) ? "bg-brand-50 font-semibold text-brand-800" : "text-slate-700 hover:bg-slate-100")}>
+                        <it.icon className={cn("h-4 w-4", isActive(it.href) ? "text-brand-600" : "text-slate-400")} />{it.label}
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           )}
 
           {/* Spacer */}
@@ -153,22 +168,24 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
 
           {/* Search — بيفتح البحث السريع (Ctrl+K) */}
           <button type="button" onClick={openQuickSearch} title="بحث (Ctrl+K)" aria-label="بحث"
-            className="group flex h-9 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50/70 px-2.5 text-sm text-slate-400 transition-all hover:border-brand-300 hover:bg-white hover:text-brand-700 hover:shadow-sm">
+            className="group flex h-9 shrink-0 items-center gap-2 rounded-full bg-white/10 px-3 text-sm text-white/70 ring-1 ring-white/15 transition-all hover:bg-white/15 hover:text-white min-[1400px]:w-56">
             <SearchIcon className="h-4 w-4 shrink-0" />
+            <span className="hidden min-[1400px]:inline">بحث عن تذكرة…</span>
+            <kbd className="mr-auto hidden rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-white/60 min-[1400px]:inline" dir="ltr">Ctrl K</kbd>
           </button>
 
           {/* User Menu */}
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex items-center gap-2 rounded-full p-1 pl-3 transition-all hover:bg-slate-100"
+              className="flex items-center gap-2 rounded-full p-1 pl-3 transition-all hover:bg-white/10"
             >
-              <span className="hidden sm:block text-sm font-medium text-slate-700">
+              <span className="hidden sm:block text-sm font-medium text-white/90">
                 {displayName(user.name)}
               </span>
-              <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white shadow-sm ring-2 ring-white transition-transform hover:scale-105">
+              <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-sm font-bold text-ink-950 shadow-sm ring-2 ring-white/25 transition-transform hover:scale-105">
                 {user.name.charAt(0)}
-                <span className="absolute -bottom-0.5 -left-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                <span className="absolute -bottom-0.5 -left-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-ink-800" />
               </span>
             </button>
 
@@ -290,13 +307,13 @@ function NavLink({ href, label, icon: Icon, active, badge }: {
       className={cn(
         "group relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
         active
-          ? "bg-brand-50 text-brand-700"
-          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          ? "bg-white/15 text-white"
+          : "text-white/75 hover:bg-white/10 hover:text-white"
       )}
     >
       <Icon className={cn("h-4 w-4 transition-transform duration-200", active ? "" : "group-hover:scale-110")} />
       {/* على الشاشات المتوسطة الأيقونة بس — الاسم بيظهر في التلميح */}
-      <span className="hidden min-[1500px]:inline">{label}</span>
+      <span className="hidden xl:inline">{label}</span>
       {typeof badge === "number" && badge > 0 && (
         <span className="ml-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white animate-pulse-scale">
           {badge > 99 ? "99+" : badge}
@@ -304,10 +321,10 @@ function NavLink({ href, label, icon: Icon, active, badge }: {
       )}
       {/* underline animation */}
       {!active && (
-        <span className="absolute bottom-0 left-1/2 h-0.5 w-0 -translate-x-1/2 bg-brand-500 transition-all duration-200 group-hover:w-8 rounded-full" />
+        <span className="absolute -bottom-[9px] left-1/2 h-[3px] w-0 -translate-x-1/2 rounded-full bg-accent-400/70 transition-all duration-200 group-hover:w-6" />
       )}
       {active && (
-        <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-brand-600 rounded-full" />
+        <span className="absolute -bottom-[9px] left-1/2 h-[3px] w-8 -translate-x-1/2 rounded-full bg-accent-400" />
       )}
     </Link>
   );
@@ -335,7 +352,7 @@ function TabLink({ href, label, icon: Icon, active, badge }: {
 // ────────────────────────────────────────────────
 function QuickAdd({ href, label, color }: { href: string; label: string; color: "teal" | "gold" }) {
   const styles = color === "teal"
-    ? "bg-brand-50 text-brand-700 hover:bg-brand-600 hover:text-white ring-1 ring-brand-200 hover:ring-brand-600"
+    ? "bg-accent-400 text-ink-950 hover:bg-accent-300 ring-1 ring-accent-300"
     : "bg-accent-50 text-accent-700 hover:bg-accent-500 hover:text-white ring-1 ring-accent-200 hover:ring-accent-500";
   return (
     <Link

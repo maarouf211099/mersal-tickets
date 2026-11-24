@@ -196,7 +196,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
           const sla = slaState(t, now);
           return (
             <Link key={t.id} href={`/tickets/${t.id}`}
-              className={`card block border-r-4 p-4 transition active:scale-[0.99] ${TYPE_STRIPE[t.type]} ${t.status === "pending" && sla === "breached" ? "bg-red-50/60" : ""}`}>
+              className={`card block border-r-4 p-4 transition active:scale-[0.99] ${TYPE_STRIPE[t.type]}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="truncate font-semibold text-slate-900">{t.beneficiaryName}</div>
@@ -244,7 +244,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
             {tickets.map((t) => {
               const sla = slaState(t, now);
               return (
-              <tr key={t.id} className={`group relative cursor-pointer ${t.status === "pending" && sla === "breached" ? "bg-red-50/50" : ""}`}>
+              <tr key={t.id} className="group relative cursor-pointer">
                 <td className={`border-r-4 ${TYPE_STRIPE[t.type]}`}>
                   <Link href={`/tickets/${t.id}`} className="font-medium text-brand-700 after:absolute after:inset-0 group-hover:underline">{t.beneficiaryName}</Link>
                   <div className="font-mono text-xs text-slate-400">

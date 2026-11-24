@@ -5,7 +5,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Cairo", "system-ui", "sans-serif"],
+        sans: ["IBM Plex Sans Arabic", "Cairo", "system-ui", "sans-serif"],
       },
       colors: {
         // اللون الرئيسي: تركوازي مرسال (Teal)
@@ -20,6 +20,14 @@ export default {
           700: "#0f766e",
           800: "#115e59",
           900: "#134e4a",
+        },
+        // حبر مرسال: تركوازي غامق للشريط العلوي والبانرات
+        ink: {
+          600: "#11605b",
+          700: "#0d4f4b",
+          800: "#0a3f3c",
+          900: "#072f2d",
+          950: "#04201f",
         },
         // اللون الثانوي: ذهبي (Gold/Amber) — من الجزء العربي في اللوجو
         accent: {

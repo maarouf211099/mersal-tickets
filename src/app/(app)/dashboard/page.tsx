@@ -51,16 +51,16 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="animate-gradient relative overflow-hidden rounded-2xl bg-gradient-to-l from-brand-700 via-brand-600 to-brand-500 p-6 text-white shadow-lg shadow-brand-900/10">
+      <div className="hero-ink relative overflow-hidden rounded-3xl p-7 text-white shadow-xl shadow-ink-900/20 ring-1 ring-ink-900/10">
         <div aria-hidden className="pointer-events-none absolute -left-10 -top-16 h-48 w-48 animate-float rounded-full bg-white/10" />
         <div aria-hidden className="pointer-events-none absolute -bottom-20 left-32 h-40 w-40 animate-float-slow rounded-full bg-white/5" />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm text-brand-100">{today}</p>
-            <h1 className="mt-1 text-2xl font-bold">مرحبًا، {user.name} 👋</h1>
+            <h1 className="mt-1 text-3xl font-bold">مرحبًا، {user.name} 👋</h1>
             <p className="mt-1 text-sm text-brand-50/90">
               {totalPending === 0 ? (mgr ? "لا توجد تذاكر مفتوحة الآن" : "مفيش تذاكر مفتوحة عند فريقك دلوقتي 🎉") : mgr ? `يوجد ${totalPending} تذكرة قيد التنفيذ في النظام` : `عند فريقك ${totalPending} تذكرة قيد التنفيذ`}
-              {breached > 0 && <span className="font-semibold text-accent-200"> — منها {breached} تجاوزت المهلة</span>}
+              {breached > 0 && <span className="font-semibold text-accent-300"> — منها {breached} تجاوزت المهلة</span>}
             </p>
           </div>
           <Link href="/tickets/new" className="group inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-brand-50 hover:shadow-md active:scale-[0.97]">

@@ -3,10 +3,10 @@ import { cn } from "@/lib/utils";
 
 // نظام موحد للحقول: كلها بنفس الارتفاع، نفس الـ padding، نفس الـ typography
 const baseField =
-  "block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 " +
+  "block w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-[inset_0_1px_2px_rgba(7,47,45,0.04)] " +
   "placeholder:text-slate-400 " +
   "transition-colors " +
-  "focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 " +
+  "hover:border-slate-300 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15 " +
   "disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
@@ -34,7 +34,7 @@ export function Select(props: React.ComponentProps<"select">) {
 
 export function Label({ children, htmlFor, required }: { children: React.ReactNode; htmlFor?: string; required?: boolean }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-slate-700">
+    <label htmlFor={htmlFor} className="mb-1.5 block text-[13px] font-semibold text-slate-600">
       {children} {required && <span className="text-red-500">*</span>}
     </label>
   );

@@ -2,8 +2,9 @@ import { cn } from "@/lib/utils";
 
 // لوجو مرسال — النص العربي بالذهبي + النص الإنجليزي بالتركوازي (مطابق للهوية الرسمية)
 export function Logo({
-  className, showText = true, size = 40, variant = "full",
+  className, showText = true, size = 40, variant = "full", onDark = false,
 }: {
+  onDark?: boolean;
   className?: string;
   showText?: boolean;
   size?: number;
@@ -20,11 +21,11 @@ export function Logo({
       {showText && (
         <div className="flex flex-col leading-none">
           {/* النص العربي - ذهبي */}
-          <span className="text-2xl font-extrabold text-accent-500 tracking-tight" style={{ fontFamily: "Cairo, sans-serif" }}>
+          <span className={cn("text-2xl font-extrabold tracking-tight", onDark ? "text-accent-400" : "text-accent-500")} style={{ fontFamily: "Cairo, sans-serif" }}>
             مرسال
           </span>
           {/* النص الإنجليزي - تركوازي */}
-          <span className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.25em] text-brand-600">
+          <span className={cn("mt-0.5 text-[10px] font-bold uppercase tracking-[0.25em]", onDark ? "text-brand-200" : "text-brand-600")}>
             Mersal Foundation
           </span>
         </div>

@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const ssoError = sso ? SSO_ERRORS[sso] : undefined;
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <aside className="animate-gradient relative hidden w-[46%] overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 p-12 text-white lg:flex lg:flex-col lg:justify-between">
+      <aside className="hero-ink relative hidden w-[46%] overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div aria-hidden className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 animate-float rounded-full bg-white/10" />
         <div aria-hidden className="pointer-events-none absolute -bottom-32 -right-16 h-96 w-96 animate-float-slow rounded-full bg-accent-400/15" />
         <div aria-hidden className="pointer-events-none absolute right-1/3 top-1/4 h-24 w-24 animate-float-slow rounded-full bg-white/5" />
@@ -50,7 +50,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <p className="relative text-xs text-brand-200">© {new Date().getFullYear()} مؤسسة مرسال — جميع الحقوق محفوظة</p>
       </aside>
 
-      <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-brand-50 via-white to-accent-50/30 p-4">
+      <div className="flex flex-1 items-center justify-center app-bg p-4">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center lg:hidden">
             <div className="mb-4 flex animate-pop-in justify-center">

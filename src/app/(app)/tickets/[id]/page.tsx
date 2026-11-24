@@ -417,8 +417,8 @@ function Phone({ n }: { n: string }) {
 
 function Info({ label, children, mono }: { label: string; children: React.ReactNode; mono?: boolean }) {
   return (
-    <div className="rounded-xl bg-slate-50/80 px-3 py-2.5 ring-1 ring-slate-100">
-      <div className="text-[11px] font-medium text-slate-500">{label}</div>
+    <div className="rounded-xl bg-[#f4f7f6] px-3.5 py-2.5">
+      <div className="text-[11px] font-semibold text-slate-400">{label}</div>
       <div className={`mt-0.5 font-medium text-slate-800 ${mono ? "font-mono text-sm" : ""}`} dir={mono ? "ltr" : undefined} style={mono ? { textAlign: "right" } : undefined}>
         {children}
       </div>

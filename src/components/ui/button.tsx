@@ -5,16 +5,16 @@ type Variant = "primary" | "secondary" | "danger" | "ghost" | "outline";
 type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
-  primary:   "bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow disabled:hover:bg-brand-600 disabled:opacity-60",
-  secondary: "bg-white text-slate-700 border border-slate-300 shadow-sm hover:bg-slate-50 hover:border-slate-400",
+  primary:   "bg-gradient-to-b from-brand-500 to-brand-700 text-white shadow-sm shadow-brand-900/20 hover:from-brand-600 hover:to-brand-800 hover:shadow-md hover:shadow-brand-900/20 disabled:opacity-60",
+  secondary: "bg-white text-slate-700 border border-slate-200 shadow-sm hover:bg-slate-50 hover:border-slate-300",
   outline:   "bg-transparent text-brand-700 border border-brand-500 hover:bg-brand-50",
-  danger:    "bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow",
+  danger:    "bg-gradient-to-b from-red-500 to-red-700 text-white shadow-sm shadow-red-900/20 hover:from-red-600 hover:to-red-800",
   ghost:     "text-slate-700 hover:bg-slate-100",
 };
 const sizes: Record<Size, string> = {
-  sm: "text-xs px-2.5 py-1.5 rounded-md gap-1",
-  md: "text-sm px-4 py-2.5 rounded-lg gap-1.5",
-  lg: "text-base px-5 py-3 rounded-lg gap-2",
+  sm: "text-xs px-2.5 py-1.5 rounded-lg gap-1",
+  md: "text-sm px-4 py-2.5 rounded-xl gap-1.5",
+  lg: "text-base px-5 py-3 rounded-xl gap-2",
 };
 
 export const Button = React.forwardRef<
@@ -27,7 +27,7 @@ export const Button = React.forwardRef<
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        "inline-flex items-center justify-center font-medium transition-all duration-150 active:scale-[0.97] disabled:active:scale-100",
+        "inline-flex items-center justify-center font-semibold transition-all duration-150 active:scale-[0.97] disabled:active:scale-100",
         "focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:ring-offset-1",
         "disabled:cursor-not-allowed",
         variants[variant], sizes[size], className,

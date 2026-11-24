@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Cairo:wght@700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -7,9 +7,9 @@
 * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 html, body {
-  font-family: "Cairo", system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: #f6f8fa;
-  color: #0f172a;
+  font-family: "IBM Plex Sans Arabic", "Cairo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #f3f5f4;
+  color: #0f1f1e;
   letter-spacing: 0;
 }
 
@@ -19,26 +19,28 @@ input, textarea, select { font-size: 14px; }
 /* Cards */
 .card {
   background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(13, 148, 136, 0.04);
+  border: 1px solid #e3e8e7;
+  border-radius: 18px;
+  box-shadow: 0 1px 0 0 rgba(7, 47, 45, 0.03), 0 8px 24px -16px rgba(7, 47, 45, 0.18);
 }
 .card-hover {
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 .card-hover:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  border-color: #cbd5e1;
+  box-shadow: 0 2px 0 0 rgba(7, 47, 45, 0.03), 0 18px 34px -18px rgba(7, 47, 45, 0.32);
+  border-color: #b9d6d2;
 }
 
 /* Table styles */
 .data-table { width: 100%; text-align: right; font-size: 14px; }
-.data-table thead { background: #f8fafc; color: #64748b; border-bottom: 1px solid #e2e8f0; }
-.data-table th { padding: 11px 16px; font-weight: 600; font-size: 12px; text-transform: none; white-space: nowrap; }
-.data-table td { padding: 12px 16px; vertical-align: middle; }
-.data-table tbody tr { border-top: 1px solid #f1f5f9; transition: background-color 0.1s; }
-.data-table tbody tr:hover { background: #f0fdfa80; }
+.data-table thead { background: #f4f7f6; color: #4b615f; border-bottom: 1px solid #e3e8e7; }
+.data-table th { padding: 12px 16px; font-weight: 600; font-size: 12.5px; text-transform: none; white-space: nowrap; }
+.data-table th:first-child { border-start-start-radius: 17px; }
+.data-table th:last-child { border-start-end-radius: 17px; }
+.data-table td { padding: 13px 16px; vertical-align: middle; }
+.data-table tbody tr { border-top: 1px solid #eef2f1; transition: background-color 0.12s; }
+.data-table tbody tr:hover { background: #ecfaf7; }
 
 /* Animations */
 @keyframes pulse-ring {
@@ -187,9 +189,9 @@ input, textarea, select { font-size: 14px; }
 /* خلفية التطبيق: تدرّج خفيف بلون مرسال فوق */
 .app-bg {
   background:
-    radial-gradient(1100px 420px at 88% -120px, rgba(20, 184, 166, 0.11), transparent 62%),
-    radial-gradient(900px 380px at 6% -140px, rgba(240, 180, 41, 0.09), transparent 60%),
-    #f6f8fa;
+    radial-gradient(1200px 380px at 85% -160px, rgba(13, 79, 75, 0.10), transparent 65%),
+    radial-gradient(900px 340px at 5% -160px, rgba(240, 180, 41, 0.08), transparent 60%),
+    #f3f5f4;
   background-attachment: fixed;
 }
 
@@ -227,3 +229,24 @@ input, textarea, select { transition: border-color 0.15s ease, box-shadow 0.2s e
   .card { box-shadow: none; break-inside: avoid; }
   .app-bg { background: white; }
 }
+
+/* ─── الشكل الجديد ───────────────────────────────────── */
+
+/* الشريط العلوي: حبر مرسال الغامق بخط ذهبي رفيع تحته */
+.nav-ink {
+  background: linear-gradient(100deg, #072f2d 0%, #0a3f3c 45%, #0d4f4b 100%);
+  box-shadow: 0 1px 0 0 rgba(240, 180, 41, 0.55), 0 10px 30px -18px rgba(4, 32, 31, 0.8);
+}
+
+/* بانر الصفحات الرئيسية */
+.hero-ink {
+  background:
+    radial-gradient(520px 220px at 12% 0%, rgba(240, 180, 41, 0.22), transparent 70%),
+    radial-gradient(600px 260px at 92% 120%, rgba(45, 212, 191, 0.22), transparent 70%),
+    linear-gradient(110deg, #072f2d 0%, #0d4f4b 60%, #11605b 100%);
+}
+
+/* الأرقام بعرض ثابت في الجداول والعدادات */
+.data-table td, .tabular-nums { font-variant-numeric: tabular-nums; }
+
+h1, h2, h3 { letter-spacing: -0.01em; }
