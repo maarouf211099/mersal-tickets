@@ -156,7 +156,13 @@ export async function pushCaseDecision(code: string, text: string): Promise<void
   }
   if (!r) throw new Error(`مش قادر يوصل لسيستم الحالات — ${reasons.join(" / ")}`);
   const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-  if (r.status === 403) throw new Error("مفتاح سيستم الحالات للقراءة بس — محتاج مفتاح بصلاحية كاملة علشان القرار يتسجل هناك");
+  if (r.status === 403) {
+    const key = process.env.CASES_API_KEY!.trim().slice(0, 12);
+    // سيستم الحالات بيرد 403 في حالتين: المفتاح قراءة بس، أو صاحب المفتاح مالوش صلاحية إضافة تعليقات
+    throw new Error(/للقراءة/.test(j.error ?? "")
+      ? `المفتاح المستخدم (${key}…) للقراءة بس — لازم مفتاح «قراءة وكتابة» وإعادة نشر بعد تغييره`
+      : `سيستم الحالات رفض الكتابة بالمفتاح (${key}…): ${j.error || "403"} — صاحب المفتاح محتاج صلاحية إضافة تعليقات/قرارات`);
+  }
   if (r.status === 401) throw new Error(j.error || "مفتاح سيستم الحالات غير صالح");
   if (!r.ok || j.error) throw new Error(j.error || `سيستم الحالات رجّع خطأ (${r.status})`);
 }
