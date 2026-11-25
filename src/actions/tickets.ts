@@ -15,8 +15,9 @@ import {
   EGYPTIAN, TEAM, TRIAGE_LABELS, identityError, normalizeDigits, parseMentions,
   GENDERS, OUTBOUND_EMERGENCY_SLA_MINUTES, researchOutcome, slaDeadlineAfterReceive, slaDeadlineAfterTransfer,
   slaDeadlineFor, transferTargets, transferTargetsForTicket, triageHolders,
-  MERSAL_DECISION_LABELS, RESEARCH_REQUEST_TYPES, mersalDecisionTarget, type MersalDecision,
+  MERSAL_DECISION_LABELS, RESEARCH_REQUEST_TYPES, SPONSOR_RATES, mersalDecisionTarget, type MersalDecision,
 } from "@/lib/workflow";
+import { casesEnabled, pushCaseDecision } from "@/lib/cases";
 
 type Result = { ok: true; warning?: string } | { ok: false; error: string };
 
@@ -472,7 +473,7 @@ export async function decideResearch(ticketId: string, decision: "accepted" | "r
 
 // ─── قرار قرارات مرسال: تكفل ← طبيب المتابعة / استبعاد أو غلق ← Admin الطوارئ ───
 export async function decideMersal(
-  ticketId: string, decision: MersalDecision, comment: string, sponsor?: { amount: string; rate: string },
+  ticketId: string, decision: MersalDecision, comment: string, sponsor?: { amount: string; rate: string; duration: string },
 ): Promise<Result> {
   return guard(async () => {
     const user = await requireUser();
@@ -482,13 +483,17 @@ export async function decideMersal(
     const text = comment.trim();
     if (decision !== "sponsor" && text.length < 3) return { ok: false, error: "اكتب سبب القرار" };
     const amount = decision === "sponsor" ? (sponsor?.amount ?? "").trim().slice(0, 200) : "";
-    const rate = decision === "sponsor" ? (sponsor?.rate ?? "").trim().slice(0, 200) : "";
-    if (decision === "sponsor" && (!amount || !rate)) return { ok: false, error: "اكتب قيمة المساهمة ومعدلها" };
+    const rate = decision === "sponsor" ? (sponsor?.rate ?? "").trim() : "";
+    const duration = decision === "sponsor" ? (sponsor?.duration ?? "").trim().slice(0, 200) : "";
+    if (decision === "sponsor" && !amount) return { ok: false, error: "اكتب قيمة المساهمة" };
+    if (decision === "sponsor" && !(SPONSOR_RATES as readonly string[]).includes(rate)) return { ok: false, error: "اختار معدل المساهمة: مرة واحدة أو متكرر (يوميًا / شهريًا)" };
+    if (decision === "sponsor" && !duration) return { ok: false, error: "اكتب مدة القرار" };
 
     const pair = await teamsByCode([TEAM.MERSAL_DECISIONS, mersalDecisionTarget(decision)]);
     const decisions = pair.find((t) => t.code === TEAM.MERSAL_DECISIONS)!;
     const target = pair.find((t) => t.code === mersalDecisionTarget(decision))!;
     const label = MERSAL_DECISION_LABELS[decision];
+    const decisionText = `قرار مرسال: ${label}${amount ? `\nقيمة المساهمة: ${amount}\nمعدل المساهمة: ${rate}\nمدة القرار: ${duration}` : ""}${text ? `\n${text}` : ""}`;
     const now = new Date();
     const newDeadline = slaDeadlineAfterTransfer(ticket.type, target.code, now);
 
@@ -499,14 +504,30 @@ export async function decideMersal(
         where: { id: ticketId },
         data: {
           mersalDecision: decision, mersalDecidedAt: now, mersalDecidedById: user.id,
-          sponsorAmount: amount || null, sponsorRate: rate || null,
+          sponsorAmount: amount || null, sponsorRate: rate || null, decisionDuration: duration || null,
           receivedAt: null, receivedById: null, assignedToId: null,
           ...(newDeadline && { slaDeadline: newDeadline, slaBreachNotifiedAt: null }),
         },
       });
-      await tx.ticketComment.create({ data: { ticketId, authorId: user.id, kind: "note", body: `قرار مرسال: ${label}${amount ? `\nقيمة المساهمة: ${amount}\nمعدل المساهمة: ${rate}` : ""}${text ? `\n${text}` : ""}` } });
-      await tx.ticketEvent.create({ data: { ticketId, actorId: user.id, action: "mersal_decision", metadata: { decision, label, to: target.name, comment: text || null, ...(amount && { amount, rate }) } } });
+      await tx.ticketComment.create({ data: { ticketId, authorId: user.id, kind: "note", body: decisionText } });
+      await tx.ticketEvent.create({ data: { ticketId, actorId: user.id, action: "mersal_decision", metadata: { decision, label, to: target.name, comment: text || null, ...(amount && { amount, rate, duration }) } } });
     });
+
+    // القرار بيتسجل كمان في قرارات الحالة في سيستم الحالات (لو التذكرة عليها كود) — الفشل ما بيلغيش القرار هنا
+    let warning: string | undefined;
+    const caseCode = normalizeDigits(ticket.caseCode ?? "").trim();
+    if (caseCode && casesEnabled()) {
+      try {
+        await pushCaseDecision(caseCode, `${decisionText}\n— من نظام التذاكر (${ticket.ticketNumber}) بواسطة ${user.name}`);
+        await prisma.ticketEvent.create({ data: { ticketId, actorId: user.id, action: "case_decision_synced", metadata: { code: caseCode } } });
+      } catch (e) {
+        const why = e instanceof Error ? e.message : "خطأ غير معروف";
+        warning = `القرار اتسجل على التذكرة، لكن ماتسجلش في سيستم الحالات: ${why}`;
+        await prisma.ticketEvent.create({ data: { ticketId, actorId: user.id, action: "case_decision_sync_failed", metadata: { code: caseCode, error: why } } });
+      }
+    } else if (!caseCode && casesEnabled()) {
+      warning = "القرار اتسجل على التذكرة بس — التذكرة مفيهاش كود حالة علشان يتسجل في سيستم الحالات";
+    }
 
     await notify({
       userIds: await teamMemberIds([target.id], user.id),
@@ -517,7 +538,7 @@ export async function decideMersal(
       body: text || undefined,
     });
     refresh(ticketId);
-    return { ok: true };
+    return warning ? { ok: true, warning } : { ok: true };
   });
 }
 
@@ -632,6 +653,63 @@ export async function assignTicket(ticketId: string, assigneeId: string | null):
     }
     refresh(ticketId);
     return { ok: true };
+  });
+}
+
+// ─── توزيع جماعي: المشرف (أو المدير) يسند مجموعة تذاكر لموظف، أو بالتساوي على موظفي الفريق ───
+export async function bulkAssign(ticketIds: string[], assignee: string): Promise<Result> {
+  return guard(async () => {
+    const user = await requireUser();
+    const manager = isManager(user);
+    if (!manager && user.role !== "supervisor") return { ok: false, error: "التوزيع الجماعي للمشرف فقط" };
+    const ids = [...new Set(ticketIds)].slice(0, 200);
+    if (!ids.length || !assignee) return { ok: false, error: "حدّد التذاكر والموظف" };
+
+    const tickets = await prisma.ticket.findMany({
+      where: { AND: [{ id: { in: ids }, status: "pending" }, ticketScope(user)] },
+      select: { id: true, ticketNumber: true, assignedToId: true, teams: { where: { access: "holder" }, select: { teamId: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    // المشرف بيوزّع التذاكر اللي عند فريقه بس
+    const mine = tickets.filter((t) => manager || t.teams.some((h) => user.teamIds.includes(h.teamId)));
+    if (!mine.length) return { ok: false, error: "التذاكر المحددة مش عند فريقك" };
+
+    const teamIds = [...new Set(mine.flatMap((t) => t.teams.map((h) => h.teamId)))].filter((id) => manager || user.teamIds.includes(id));
+    const people = await prisma.user.findMany({
+      where: { isActive: true, role: { not: "viewer" }, teams: { some: { teamId: { in: teamIds } } } },
+      select: { id: true, fullName: true, role: true, teams: { select: { teamId: true } }, _count: { select: { assignedTickets: { where: { status: "pending" } } } } },
+    });
+    const eligible = (t: (typeof mine)[number]) => people.filter((p) => p.teams.some((m) => t.teams.some((h) => h.teamId === m.teamId)));
+
+    const load = new Map(people.map((p) => [p.id, p._count.assignedTickets]));
+    const plan: { ticket: (typeof mine)[number]; to: (typeof people)[number] }[] = [];
+    for (const t of mine) {
+      const pool = eligible(t);
+      let to: (typeof people)[number] | undefined;
+      if (assignee === "even") {
+        // بالتساوي: للموظف الأقل شغلًا (الموظفين أولًا، ولو مفيش يبقى أي عضو)
+        const agents = pool.filter((p) => p.role === "agent");
+        to = [...(agents.length ? agents : pool)].sort((a, b) => (load.get(a.id) ?? 0) - (load.get(b.id) ?? 0))[0];
+      } else to = pool.find((p) => p.id === assignee);
+      if (!to || to.id === t.assignedToId) continue;
+      load.set(to.id, (load.get(to.id) ?? 0) + 1);
+      plan.push({ ticket: t, to });
+    }
+    if (!plan.length) return { ok: false, error: "مفيش تذاكر تتوزع — الموظف لازم يكون من الفريق اللي عنده التذاكر" };
+
+    await prisma.$transaction(plan.map(({ ticket, to }) => prisma.ticket.update({
+      where: { id: ticket.id },
+      data: { assignedToId: to.id, events: { create: { actorId: user.id, action: "bulk_assigned", metadata: { to: to.fullName } } } },
+    })));
+    const per = new Map<string, string[]>();
+    for (const { ticket, to } of plan) per.set(to.id, [...(per.get(to.id) ?? []), ticket.ticketNumber]);
+    for (const [uid, nums] of per) {
+      if (uid === user.id) continue;
+      await notify({ userIds: [uid], type: "assigned", title: `أُسندت إليك ${nums.length} تذكرة`, body: nums.slice(0, 8).join("، ") + (nums.length > 8 ? "…" : "") });
+    }
+    refresh();
+    const skipped = ids.length - plan.length;
+    return { ok: true, warning: `تم توزيع ${plan.length} تذكرة على ${per.size} موظف${skipped ? ` — ${skipped} اتسابت زي ما هي` : ""}` };
   });
 }
 

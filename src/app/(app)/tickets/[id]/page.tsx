@@ -135,6 +135,11 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                   {ticket.ticketNumber}<CopyButton text={ticket.ticketNumber} label="رقم التذكرة" />
                 </div>
                 <h1 className="text-2xl font-bold text-slate-900">{ticket.beneficiaryName}</h1>
+                {ticket.caseCode && (
+                  <div className="mt-0.5 inline-flex items-center gap-1 rounded-lg bg-ink-800/[0.06] px-2 py-0.5 text-sm font-semibold text-ink-800">
+                    كود الحالة: <span className="font-mono" dir="ltr">{ticket.caseCode}</span><CopyButton text={ticket.caseCode} label="كود الحالة" />
+                  </div>
+                )}
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {ticket.teams.map((t) => (
                     <TeamChip key={t.teamId} name={t.team.name} color={t.team.color} observer={t.access === "observer"} />
@@ -187,6 +192,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
             )}
             {ticket.sponsorAmount && <Info label="قيمة المساهمة">{ticket.sponsorAmount}</Info>}
             {ticket.sponsorRate && <Info label="معدل المساهمة">{ticket.sponsorRate}</Info>}
+            {ticket.decisionDuration && <Info label="مدة القرار">{ticket.decisionDuration}</Info>}
             {ticket.researchRequestType && <Info label="نوع طلب الأبحاث">{ticket.researchRequestType}</Info>}
           </div>
 

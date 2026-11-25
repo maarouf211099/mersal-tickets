@@ -127,7 +127,7 @@ export default async function DashboardPage() {
                   <tr key={t.id} className="group relative cursor-pointer">
                     <td>
                       <Link href={`/tickets/${t.id}`} className="font-medium text-brand-700 after:absolute after:inset-0 group-hover:underline">{t.beneficiaryName}</Link>
-                      <div className="font-mono text-xs text-slate-400">{t.ticketNumber}</div>
+                      <div className="font-mono text-xs text-slate-400">{t.caseCode && <b className="ml-2 text-ink-700" dir="ltr">#{t.caseCode}</b>}{t.ticketNumber}</div>
                     </td>
                     <td><TypeBadge type={t.type} /></td>
                     <td className="space-x-1 space-x-reverse">{t.teams.map((x) => <TeamChip key={x.teamId} name={x.team.name} color={x.team.color} />)}</td>

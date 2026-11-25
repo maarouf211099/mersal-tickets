@@ -209,6 +209,8 @@ model Ticket {
   // التكفل: قيمة المساهمة ومعدلها (نص حر)
   sponsorAmount       String?
   sponsorRate         String?
+  // مدة القرار (نص حر) — مع التكفل
+  decisionDuration    String?
   // نوع الطلب لما التذكرة تتحول للأبحاث: بحث / إعادة مناقشة / استبيان
   researchRequestType String?
   mersalDecidedAt     DateTime?

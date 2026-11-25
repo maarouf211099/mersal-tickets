@@ -38,7 +38,9 @@ export function TicketActions(p: Props) {
   const [err, setErr] = useState<string | null>(null);
 
   const [busy, setBusy] = useState<string | null>(null);
-  function run(key: string, okText: string, fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) {
+  const [warn, setWarn] = useState<string | null>(null);
+  function run(key: string, okText: string, fn: () => Promise<{ ok: boolean; error?: string; warning?: string }>, after?: () => void) {
+    setWarn(null);
     setErr(null);
     setBusy(key);
     start(async () => {
@@ -46,6 +48,7 @@ export function TicketActions(p: Props) {
       setBusy(null);
       if (!r.ok) { setErr(r.error ?? "خطأ"); toast(r.error ?? "حدث خطأ", "error"); return; }
       toast(okText);
+      if (r.warning) { setWarn(r.warning); toast(r.warning, "error"); }
       after?.();
       router.refresh();
     });
@@ -56,6 +59,7 @@ export function TicketActions(p: Props) {
   return (
     <div className="space-y-4">
       {err && <div className="animate-expand rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>}
+      {warn && <div className="animate-expand rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">⚠️ {warn}</div>}
 
       {p.perms.canReceive && !p.isDevice && (
         <div className="card animate-expand border-brand-300 bg-gradient-to-b from-brand-50 to-white p-4">
@@ -163,14 +167,17 @@ function ResearchCard({ pending, onSubmit }: { pending: boolean; onSubmit: (d: "
 
 function MersalDecisionCard({ pending, busy, onSubmit }: {
   pending: boolean; busy: string | null;
-  onSubmit: (d: "sponsor" | "exclude" | "close", c: string, sponsor: { amount: string; rate: string } | undefined, clear: () => void) => void;
+  onSubmit: (d: "sponsor" | "exclude" | "close", c: string, sponsor: { amount: string; rate: string; duration: string } | undefined, clear: () => void) => void;
 }) {
+  const [mode, setMode] = useState<"" | "once" | "repeat">("");
+  const [every, setEvery] = useState<"" | "يوميًا" | "شهريًا">("");
+  const [duration, setDuration] = useState("");
   const [comment, setComment] = useState("");
   const [sponsorOpen, setSponsorOpen] = useState(false);
   const [amount, setAmount] = useState("");
-  const [rate, setRate] = useState("");
+  const rate = mode === "once" ? "مرة واحدة" : mode === "repeat" && every ? `متكرر — ${every}` : "";
   const short = comment.trim().length < 3;
-  const clear = () => { setComment(""); setAmount(""); setRate(""); setSponsorOpen(false); };
+  const clear = () => { setComment(""); setAmount(""); setMode(""); setEvery(""); setDuration(""); setSponsorOpen(false); };
   const go = (d: "exclude" | "close", ask: string) => { if (confirm(ask)) onSubmit(d, comment, undefined, clear); };
   return (
     <Card title="⚖️ قرار مرسال" tone="doctor">
@@ -181,11 +188,28 @@ function MersalDecisionCard({ pending, busy, onSubmit }: {
         ) : (
           <div className="animate-expand space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
             <p className="text-sm font-semibold text-emerald-900">🤝 بيانات التكفل</p>
-            <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="قيمة المساهمة (مثلًا: 1500 جنيه شهريًا)" autoFocus />
-            <Input value={rate} onChange={(e) => setRate(e.target.value)} placeholder="معدل المساهمة (مثلًا: شهريًا / كل 3 شهور / مرة واحدة)" />
+            <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="قيمة المساهمة (مثلًا: 1500 جنيه)" autoFocus />
+            <div>
+              <p className="mb-1 text-xs font-semibold text-slate-600">معدل المساهمة</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {([["once", "مرة واحدة"], ["repeat", "متكرر"]] as const).map(([k, l]) => (
+                  <button key={k} type="button" aria-pressed={mode === k} onClick={() => { setMode(k); if (k === "once") setEvery(""); }}
+                    className={`rounded-lg border px-2 py-2 text-sm transition ${mode === k ? "border-emerald-500 bg-white font-semibold text-emerald-900 shadow-sm" : "border-slate-200 bg-white/60 text-slate-600 hover:border-slate-300"}`}>{l}</button>
+                ))}
+              </div>
+              {mode === "repeat" && (
+                <div className="animate-expand mt-1.5 grid grid-cols-2 gap-1.5">
+                  {(["يوميًا", "شهريًا"] as const).map((x) => (
+                    <button key={x} type="button" aria-pressed={every === x} onClick={() => setEvery(x)}
+                      className={`rounded-lg border px-2 py-1.5 text-sm transition ${every === x ? "border-emerald-500 bg-emerald-600 font-semibold text-white" : "border-slate-200 bg-white/60 text-slate-600 hover:border-slate-300"}`}>{x}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="مدة القرار (مثلًا: 6 شهور)" />
             <div className="grid grid-cols-2 gap-2">
-              <Button type="button" variant="primary" loading={busy === "mersal-sponsor"} disabled={pending || !amount.trim() || !rate.trim()}
-                onClick={() => onSubmit("sponsor", comment, { amount, rate }, clear)}>تأكيد التكفل</Button>
+              <Button type="button" variant="primary" loading={busy === "mersal-sponsor"} disabled={pending || !amount.trim() || !rate || !duration.trim()}
+                onClick={() => onSubmit("sponsor", comment, { amount, rate, duration }, clear)}>تأكيد التكفل</Button>
               <Button type="button" variant="ghost" disabled={pending} onClick={() => setSponsorOpen(false)}>إلغاء</Button>
             </div>
           </div>

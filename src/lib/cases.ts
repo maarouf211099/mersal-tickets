@@ -134,3 +134,29 @@ export async function fetchCasePatient(code: string): Promise<CasePatient> {
     lastDecisionDate: last?.date ?? null,
   };
 }
+
+// ─── تسجيل قرار في سيستم الحالات (محتاج مفتاح بصلاحية كاملة مش قراءة بس) ───
+export async function pushCaseDecision(code: string, text: string): Promise<void> {
+  if (!casesEnabled()) throw new Error("ربط سيستم الحالات غير مفعّل على السيرفر");
+  const bases = process.env.CASES_URL!.split(",").map((u) => u.trim().replace(/\/+$/, "")).filter(Boolean);
+  let r: Response | null = null;
+  const reasons: string[] = [];
+  for (const base of bases) {
+    try {
+      r = await fetch(`${base}/api/cases/${encodeURIComponent(code)}/comments`, {
+        method: "POST",
+        headers: { "x-api-key": process.env.CASES_API_KEY!.trim(), "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ type: "qarar", text }),
+        cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      break; // وصل للسيرفر — ما نكررش الإرسال على عنوان تاني علشان القرار ما يتسجلش مرتين
+    } catch (e) {
+      reasons.push(netReason(e, base));
+    }
+  }
+  if (!r) throw new Error(`مش قادر يوصل لسيستم الحالات — ${reasons.join(" / ")}`);
+  const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+  if (r.status === 403) throw new Error("مفتاح سيستم الحالات للقراءة بس — محتاج مفتاح بصلاحية كاملة علشان القرار يتسجل هناك");
+  if (r.status === 401) throw new Error(j.error || "مفتاح سيستم الحالات غير صالح");
+  if (!r.ok || j.error) throw new Error(j.error || `سيستم الحالات رجّع خطأ (${r.status})`);
+}

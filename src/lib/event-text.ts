@@ -13,7 +13,10 @@ export function describeEvent(action: string, metadata: unknown): string {
       `حُوِّلت من ${list(m.from) || "—"} إلى ${m.to}${m.researchType ? ` (${m.researchType})` : ""}${m.slaHours ? ` — مهلة الإنجاز أصبحت ${m.slaHours} ساعة من وقت التحويل` : ""}`, m.note);
     case "triaged": return withNote(`صنّفها طبيب الخط الساخن حالةً ${m.level === "urgent" ? "عاجلة" : "طارئة"} ← ${list(m.to)}`, m.note);
     case "research_accepted": return withNote(`قبلت الأبحاث الحالة ← ${list(m.to)}`, m.comment);
-    case "mersal_decision": return withNote(`قرار مرسال: ${m.label ?? ""}${m.amount ? ` (المساهمة: ${m.amount} — المعدل: ${m.rate ?? m.duration})` : ""} ← ${m.to ?? ""}`, m.comment);
+    case "mersal_decision": return withNote(`قرار مرسال: ${m.label ?? ""}${m.amount ? ` (المساهمة: ${m.amount} — المعدل: ${m.rate ?? "—"}${m.rate && m.duration ? ` — مدة القرار: ${m.duration}` : ""})` : ""} ← ${m.to ?? ""}`, m.comment);
+    case "case_decision_synced": return `القرار اتسجل في قرارات الحالة ${m.code ?? ""} في سيستم الحالات`;
+    case "case_decision_sync_failed": return `القرار ماتسجلش في سيستم الحالات (${m.code ?? ""}): ${m.error ?? ""}`;
+    case "bulk_assigned": return `أُسندت إلى ${m.to ?? "—"} (توزيع جماعي)`;
     case "research_rejected": return withNote("رفضت الأبحاث الحالة وأُغلقت التذكرة", m.comment);
     case "closed": return withNote(`أُغلقت التذكرة${m.category ? ` — ${m.category}` : ""}`, m.reason);
     case "received": {

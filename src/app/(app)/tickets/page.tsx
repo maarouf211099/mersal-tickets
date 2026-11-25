@@ -11,6 +11,7 @@ import { Input, Select } from "@/components/ui/form";
 import { displayName, formatDateTime } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
 import { PageHeader } from "@/components/ui/page-header";
+import { BulkAssign } from "@/components/tickets/bulk-assign";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 50;
@@ -77,6 +78,16 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
     return p.toString();
   };
   const canExport = isManager(user) || user.canExport;
+  // عمود «نوع البحث» لفريق الأبحاث
+  const researchCol = user.teamCodes.includes("RESEARCH");
+  // التوزيع الجماعي: المشرف على تذاكر فرقه — والمدير لما يفلتر على فريق معيّن
+  const bulkTeamIds = user.role === "supervisor" ? user.teamIds : isManager(user) && f.teamId && f.teamId !== "mine" ? [f.teamId] : [];
+  const bulkMembers = bulkTeamIds.length ? await prisma.user.findMany({
+    where: { isActive: true, role: { not: "viewer" }, teams: { some: { teamId: { in: bulkTeamIds } } } },
+    orderBy: { fullName: "asc" },
+    select: { id: true, fullName: true, _count: { select: { assignedTickets: { where: { status: "pending" } } } } },
+  }) : [];
+  const canBulk = bulkMembers.length > 0;
 
   // عنوان عمود قابل للترتيب: أول ضغطة بالترتيب الافتراضي للعمود، والضغطة التانية بتعكسه
   function SortTh({ k, label }: { k: SortKey; label: string }) {
@@ -200,6 +211,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="truncate font-semibold text-slate-900">{t.beneficiaryName}</div>
+                  {t.caseCode && <div className="font-mono text-xs font-semibold text-ink-700" dir="ltr" style={{ textAlign: "right" }}>#{t.caseCode}</div>}
                   <div className="font-mono text-xs text-slate-400">
                     {t.ticketNumber}{t._count.comments > 0 && ` · 💬${t._count.comments}`}{t._count.attachments > 0 && ` · 📎${t._count.attachments}`}
                   </div>
@@ -210,6 +222,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
                 {t.teams.filter((x) => x.access === "holder").map((x) => <TeamChip key={x.teamId} name={x.team.name} color={x.team.color} />)}
                 <StatusBadge status={t.status} />
                 <SlaBadge state={sla} />
+                {researchCol && t.researchRequestType && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">🔬 {t.researchRequestType}</span>}
               </div>
               <div className="mt-2.5 flex items-center justify-between gap-2 text-xs text-slate-500">
                 <span className="inline-flex min-w-0 items-center gap-1.5">
@@ -226,12 +239,16 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
         )}
       </div>
 
+      {canBulk && <BulkAssign members={bulkMembers.map((m) => ({ id: m.id, fullName: m.fullName, open: m._count.assignedTickets }))} />}
+
       <div className="card hidden overflow-x-auto md:block">
         <table className="data-table rows-in min-w-[900px]">
           <thead>
             <tr>
+              {canBulk && <th className="w-8" aria-label="تحديد" />}
               <SortTh k="name" label="التذكرة" />
               <SortTh k="type" label="النوع" />
+              {researchCol && <th>نوع البحث</th>}
               <SortTh k="source" label="المصدر" />
               <th>لدى فريق</th>
               <th>المسؤول</th>
@@ -245,13 +262,24 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
               const sla = slaState(t, now);
               return (
               <tr key={t.id} className="group relative cursor-pointer">
-                <td className={`border-r-4 ${TYPE_STRIPE[t.type]}`}>
+                {canBulk && (
+                  <td className={`border-r-4 ${TYPE_STRIPE[t.type]}`}>
+                    {t.status === "pending" && <input type="checkbox" data-bulk value={t.id} aria-label={`تحديد ${t.beneficiaryName}`} className="relative z-10 h-4 w-4 cursor-pointer accent-teal-700" />}
+                  </td>
+                )}
+                <td className={canBulk ? "" : `border-r-4 ${TYPE_STRIPE[t.type]}`}>
                   <Link href={`/tickets/${t.id}`} className="font-medium text-brand-700 after:absolute after:inset-0 group-hover:underline">{t.beneficiaryName}</Link>
+                  {t.caseCode && <div className="font-mono text-xs font-semibold text-ink-700" dir="ltr" style={{ textAlign: "right" }}>#{t.caseCode}</div>}
                   <div className="font-mono text-xs text-slate-400">
                     {t.ticketNumber}{t._count.attachments > 0 && ` · 📎${t._count.attachments}`}{t._count.comments > 0 && ` · 💬${t._count.comments}`}
                   </div>
                 </td>
                 <td><TypeBadge type={t.type} /></td>
+                {researchCol && (
+                  <td>{t.researchRequestType
+                    ? <span className="whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">{t.researchRequestType}</span>
+                    : <span className="text-slate-300">—</span>}</td>
+                )}
                 <td className="text-xs text-slate-600">{SOURCE_LABELS[t.source]}</td>
                 <td>
                   <div className="flex flex-wrap gap-1">
@@ -291,7 +319,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
               );
             })}
             {tickets.length === 0 && (
-              <tr><td colSpan={8} className="py-16 text-center">
+              <tr><td colSpan={10} className="py-16 text-center">
                 <div className="text-4xl">🔍</div>
                 <p className="mt-2 text-sm text-slate-500">لا توجد تذاكر مطابقة لمعايير البحث</p>
               </td></tr>
