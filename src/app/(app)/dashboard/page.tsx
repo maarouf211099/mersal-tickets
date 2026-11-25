@@ -185,10 +185,10 @@ const TYPE_STYLE: Record<TicketType, { icon: string; tile: string; bar: string; 
 };
 
 const TONES = {
-  brand: { tile: "bg-brand-50 text-brand-600", value: "text-slate-900" },
-  red: { tile: "bg-red-50 text-red-600", value: "text-red-600" },
-  violet: { tile: "bg-violet-50 text-violet-600", value: "text-slate-900" },
-  emerald: { tile: "bg-emerald-50 text-emerald-600", value: "text-emerald-600" },
+  brand: { tile: "bg-gradient-to-br from-brand-400 to-brand-700 text-white shadow-brand-600/30", value: "text-ink-900", glow: "bg-brand-300/40" },
+  red: { tile: "bg-gradient-to-br from-red-400 to-red-600 text-white shadow-red-600/30", value: "text-red-600", glow: "bg-red-300/40" },
+  violet: { tile: "bg-gradient-to-br from-violet-400 to-violet-600 text-white shadow-violet-600/30", value: "text-ink-900", glow: "bg-violet-300/40" },
+  emerald: { tile: "bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-emerald-600/30", value: "text-emerald-600", glow: "bg-emerald-300/40" },
 };
 
 function Stat({ label, value, href, icon: Icon, tone }: {
@@ -197,10 +197,11 @@ function Stat({ label, value, href, icon: Icon, tone }: {
   const t = TONES[tone];
   const valueCls = tone === "red" && value === 0 ? "text-slate-900" : t.value;
   return (
-    <Link href={href} className="card card-hover group flex items-center gap-4 p-4">
-      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 ${t.tile}`}><Icon className="h-6 w-6" /></span>
-      <div className="min-w-0">
-        <div className={`text-2xl font-bold leading-tight ${valueCls}`}><CountUp value={value} /></div>
+    <Link href={href} className="card card-hover group relative flex items-center gap-4 overflow-hidden p-5">
+      <span aria-hidden className={`pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full blur-2xl transition-opacity duration-300 group-hover:opacity-100 opacity-60 ${t.glow}`} />
+      <span className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-lg transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 ${t.tile}`}><Icon className="h-6 w-6" /></span>
+      <div className="relative min-w-0">
+        <div className={`text-3xl font-bold leading-tight tabular-nums ${valueCls}`}><CountUp value={value} /></div>
         <div className="truncate text-xs text-slate-500">{label}</div>
       </div>
     </Link>

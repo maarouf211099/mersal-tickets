@@ -105,12 +105,12 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
 
   return (
     <>
-      <nav className={cn("nav-ink sticky top-0 z-40 transition-all duration-300 no-print", scrolled && "shadow-lg shadow-ink-950/30")}>
-        <div className="mx-auto flex max-w-[1400px] items-center gap-2 px-4 sm:px-6 h-16">
+      <nav className="sticky top-0 z-40 px-2 pt-2 no-print sm:px-4 sm:pt-3">
+        <div className={cn("nav-glass mx-auto flex h-[60px] max-w-[1400px] items-center gap-2 rounded-2xl px-3 transition-all duration-300 sm:px-5", scrolled && "nav-glass-scrolled")}>
           {/* Logo */}
           <Link href="/dashboard" className="shrink-0 group">
             <div className="transition-transform duration-200 group-hover:scale-105">
-              <Logo onDark />
+              <Logo size={38} />
             </div>
           </Link>
 
@@ -122,7 +122,7 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
           </div>
 
           {/* Divider */}
-          <div className="hidden lg:block h-6 w-px bg-white/15" />
+          <div className="hidden lg:block h-6 w-px bg-ink-900/10" />
 
           {/* Utility Navigation */}
           <div className="hidden lg:flex items-center gap-1">
@@ -135,8 +135,8 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
           {adminNav.length > 0 && (
             <div className="relative hidden lg:block">
               <button type="button" onClick={() => setAdminOpen(!adminOpen)} aria-expanded={adminOpen}
-                className={cn("flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
-                  adminNav.some((it) => isActive(it.href)) ? "bg-white/15 text-white" : "text-white/75 hover:bg-white/10 hover:text-white")}>
+                className={cn("flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
+                  adminNav.some((it) => isActive(it.href)) ? "bg-ink-800 text-white shadow-sm shadow-ink-900/20" : "text-ink-800/80 hover:bg-ink-900/[0.07] hover:text-ink-900")}>
                 <GearIcon className="h-4 w-4" />
                 <span className="hidden xl:inline">الإدارة</span>
                 <svg viewBox="0 0 24 24" className={cn("h-3.5 w-3.5 opacity-70 transition-transform", adminOpen && "rotate-180")} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
@@ -168,24 +168,24 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
 
           {/* Search — بيفتح البحث السريع (Ctrl+K) */}
           <button type="button" onClick={openQuickSearch} title="بحث (Ctrl+K)" aria-label="بحث"
-            className="group flex h-9 shrink-0 items-center gap-2 rounded-full bg-white/10 px-3 text-sm text-white/70 ring-1 ring-white/15 transition-all hover:bg-white/15 hover:text-white min-[1400px]:w-56">
+            className="group flex h-9 shrink-0 items-center gap-2 rounded-full bg-white/55 px-3 text-sm text-slate-500 ring-1 ring-ink-900/10 transition-all hover:bg-white hover:text-ink-900 hover:shadow-sm min-[1400px]:w-56">
             <SearchIcon className="h-4 w-4 shrink-0" />
             <span className="hidden min-[1400px]:inline">بحث عن تذكرة…</span>
-            <kbd className="mr-auto hidden rounded bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-white/60 min-[1400px]:inline" dir="ltr">Ctrl K</kbd>
+            <kbd className="mr-auto hidden rounded bg-ink-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-slate-400 min-[1400px]:inline" dir="ltr">Ctrl K</kbd>
           </button>
 
           {/* User Menu */}
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex items-center gap-2 rounded-full p-1 pl-3 transition-all hover:bg-white/10"
+              className="flex items-center gap-2 rounded-full p-1 pl-3 transition-all hover:bg-ink-900/[0.07]"
             >
-              <span className="hidden sm:block text-sm font-medium text-white/90">
+              <span className="hidden sm:block text-sm font-semibold text-ink-900">
                 {displayName(user.name)}
               </span>
-              <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-sm font-bold text-ink-950 shadow-sm ring-2 ring-white/25 transition-transform hover:scale-105">
+              <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-ink-700 text-sm font-bold text-white shadow-sm ring-2 ring-white transition-transform hover:scale-105">
                 {user.name.charAt(0)}
-                <span className="absolute -bottom-0.5 -left-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-ink-800" />
+                <span className="absolute -bottom-0.5 -left-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
               </span>
             </button>
 
@@ -240,8 +240,8 @@ export function Nav({ user, initialUnread }: { user: NavUser; initialUnread: num
       <QuickSearch canCreate={user.role !== "viewer"} />
 
       {/* شريط التنقل السفلي — الموبايل والتابلت */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-md lg:hidden no-print pb-safe">
-        <div className="mx-auto grid max-w-md grid-cols-5 items-end px-2 pt-1.5">
+      <div className="fixed inset-x-0 bottom-0 z-40 px-2 pb-2 lg:hidden no-print">
+        <div className="nav-glass nav-glass-scrolled pb-safe mx-auto grid max-w-md grid-cols-5 items-end rounded-2xl px-2 pt-1.5">
           <TabLink href="/dashboard" label="الرئيسية" icon={HomeIcon} active={isActive("/dashboard")} />
           <TabLink href="/tickets" label="التذاكر" icon={TicketIcon} active={isActive("/tickets") && pathname !== "/tickets/new"} />
           {user.role !== "viewer" ? (
@@ -305,10 +305,10 @@ function NavLink({ href, label, icon: Icon, active, badge }: {
       title={label}
       aria-label={label}
       className={cn(
-        "group relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+        "group relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
         active
-          ? "bg-white/15 text-white"
-          : "text-white/75 hover:bg-white/10 hover:text-white"
+          ? "bg-ink-800 text-white shadow-sm shadow-ink-900/20"
+          : "text-ink-800/80 hover:bg-ink-900/[0.07] hover:text-ink-900"
       )}
     >
       <Icon className={cn("h-4 w-4 transition-transform duration-200", active ? "" : "group-hover:scale-110")} />
@@ -321,10 +321,10 @@ function NavLink({ href, label, icon: Icon, active, badge }: {
       )}
       {/* underline animation */}
       {!active && (
-        <span className="absolute -bottom-[9px] left-1/2 h-[3px] w-0 -translate-x-1/2 rounded-full bg-accent-400/70 transition-all duration-200 group-hover:w-6" />
+        <span className="hidden" />
       )}
       {active && (
-        <span className="absolute -bottom-[9px] left-1/2 h-[3px] w-8 -translate-x-1/2 rounded-full bg-accent-400" />
+        <span className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-accent-500" />
       )}
     </Link>
   );
